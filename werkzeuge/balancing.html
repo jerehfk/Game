@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"><title>Balancing-Simulation</title></head>
+<body>
+<pre id="aus">läuft …</pre>
+<script src="../js/data.js"></script>
+<script>
+// Nur ein Prüfwerkzeug, kein Teil des Spiels: rechnet den Verlauf zweier
+// Spielertypen über die Zeit durch – Erwartungswerte, kein Zufall.
+//
+// Seit dem neuen Scoring reicht „Ertrag mal Zeit“ nicht mehr: zwischen zwei
+// Käufen wächst punkteProTreffer weiter, die Punkte wachsen also quadratisch.
+// Die Wartezeit auf einen Kauf ist deshalb die Lösung einer quadratischen
+// Gleichung und nicht mehr eine Division.
+
+function streuung(l){const z=DATA.ZIELGENAUIGKEIT;l=Math.min(l,z.MAX_LEVEL);return z.START_STREUUNG*Math.pow(z.FAKTOR_PRO_LEVEL,l-1);}
+function intervall(l){const s=DATA.SCHUSSINTERVALL;l=Math.min(l,s.MAX_LEVEL);return s.START_SEKUNDEN*Math.pow(s.FAKTOR_PRO_LEVEL,l-1);}
+function kostenZG(l){const z=DATA.ZIELGENAUIGKEIT;return z.KOSTEN_BASIS*Math.pow(z.KOSTEN_FAKTOR,l-1)*Math.pow(z.KOSTEN_SPRUNG_FAKTOR,Math.floor((l-1)/z.KOSTEN_SPRUNG_ALLE));}
+function kostenSI(l){const s=DATA.SCHUSSINTERVALL;return s.KOSTEN_BASIS*Math.pow(s.KOSTEN_FAKTOR,l-1);}
+function kostenRing(ring,l){return DATA.RINGE[ring-1].grundpreis*Math.pow(DATA.RING_UPGRADE.KOSTEN_FAKTOR,l-1);}
+function ringZuwachs(ring,l){return DATA.RINGE[ring-1].grundpunkte*Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL,l-1);}
+
+function wahrscheinlichkeiten(sigma){
+  const n=2*sigma*sigma, p=[];
+  for(let ring=1;ring<=10;ring++){
+    const a=(10-ring+1)*0.1, i=(10-ring)*0.1;
+    p.push(Math.exp(-(i*i)/n)-Math.exp(-(a*a)/n));
+  }
+  return p; // Index 0 = Ring 1 (außen)
+}
+function trefferquote(sigma){ return 1-Math.exp(-1/(2*sigma*sigma)); }
+
+/** Treffer je Sekunde. */
+function f(s){ return trefferquote(streuung(s.zg))/intervall(s.si); }
+
+/** Zuwachs je Treffer (das „z“ der Offline-Formel). */
+function z(s){
+  const sigma=streuung(s.zg), p=wahrscheinlichkeiten(sigma);
+  let summe=0;
+  for(let i=0;i<10;i++) summe+=p[i]*ringZuwachs(i+1,s.ring[i]);
+  return summe/trefferquote(sigma);
+}
+
+/** Wachstum von punkteProTreffer je Sekunde – der eigentliche Motor. */
+function wachstum(s){ return f(s)*z(s); }
+
+/**
+ * Sekunden, bis „kosten“ bezahlbar sind.
+ * punkte(t) = punkte0 + f*ppt0*t + f²z/2 * t²  nach t aufgelöst.
+ * Geschrieben als 2c/(b+√…) statt (−b+√…)/2a, weil die zweite Form für
+ * kleines a die führenden Stellen wegsubtrahiert.
+ */
+function wartezeit(s, punkte, kosten){
+  const fehlt = kosten - punkte;
+  if (fehlt <= 0) return 0;
+  const b = f(s)*s.ppt;
+  const a = f(s)*wachstum(s)/2;
+  if (a <= 0) return b > 0 ? fehlt/b : Infinity;
+  return 2*fehlt / (b + Math.sqrt(b*b + 4*a*fehlt));
+}
+
+function simulieren(dauer, marken, art){
+  const s={zg:1,si:1,ring:new Array(10).fill(1),ppt:DATA.SCORING.START_PUNKTE_PRO_TREFFER};
+  let punkte=0, t=0, kaeufe=0;
+  const protokoll=[];
+  let naechsteMarke=0;
+
+  const kandidaten=()=>{
+    const liste=[];
+    if(s.zg<DATA.ZIELGENAUIGKEIT.MAX_LEVEL)
+      liste.push({kosten:kostenZG(s.zg),kaufen:()=>s.zg++,zurueck:()=>s.zg--});
+    if(s.si<DATA.SCHUSSINTERVALL.MAX_LEVEL)
+      liste.push({kosten:kostenSI(s.si),kaufen:()=>s.si++,zurueck:()=>s.si--});
+    for(let i=0;i<10;i++)
+      liste.push({kosten:kostenRing(i+1,s.ring[i]),kaufen:()=>s.ring[i]++,zurueck:()=>s.ring[i]--});
+    return liste;
+  };
+
+  const merken=(zeit)=>protokoll.push({t:zeit,zg:s.zg,si:s.si,ringe:s.ring.slice(),ppt:s.ppt,punkte,kaeufe});
+
+  while(t<dauer && kaeufe<500000){
+    while(naechsteMarke<marken.length && t>=marken[naechsteMarke]){ merken(marken[naechsteMarke]); naechsteMarke++; }
+
+    const liste=kandidaten();
+    let bester=null,besteBewertung=-Infinity;
+
+    if(art==='gierig'){
+      // Bewertet wird der Zuwachs am Wachstum von punkteProTreffer je Kosten.
+      // Über längere Zeit dominiert der quadratische Term, also ist das
+      // Wachstum und nicht das Momentaneinkommen die richtige Zielgröße.
+      const jetzt=wachstum(s);
+      for(const k of liste){
+        k.kaufen(); const bewertung=(wachstum(s)-jetzt)/k.kosten; k.zurueck();
+        if(bewertung>besteBewertung){besteBewertung=bewertung;bester=k;}
+      }
+    } else {
+      for(const k of liste){
+        if(-k.kosten>besteBewertung){besteBewertung=-k.kosten;bester=k;}
+      }
+    }
+    if(!bester) break;
+
+    const warten=wartezeit(s,punkte,bester.kosten);
+    if(!isFinite(warten)) break;
+
+    punkte += f(s)*s.ppt*warten + f(s)*wachstum(s)/2*warten*warten;
+    s.ppt  += wachstum(s)*warten;
+    t += warten;
+    punkte -= bester.kosten;
+    bester.kaufen(); kaeufe++;
+  }
+
+  while(naechsteMarke<marken.length){ merken(marken[naechsteMarke]); naechsteMarke++; }
+  return {protokoll,endzeit:t,kaeufe};
+}
+
+// Marken der Zieltabelle aus dem Änderungsauftrag.
+const marken=[300,3600,8*3600,86400,3*86400,7*86400,30*86400];
+const zeitName=(t)=> t<3600 ? (t/60).toFixed(0)+' min' : (t<86400 ? (t/3600).toFixed(0)+' h' : (t/86400).toFixed(0)+' d');
+const erreicht=(ringe)=>{ let h=0; for(let i=0;i<10;i++) if(ringe[i]>1) h=i+1; return h; };
+const kurz=(v)=> v>=1e6 ? v.toExponential(2) : v.toFixed(0);
+
+let aus='';
+const ergebnisse={};
+for(const art of ['gierig','ungeduldig']){
+  const e=simulieren(30*86400,marken,art);
+  ergebnisse[art]=e;
+  aus+= (art==='gierig'
+    ? 'A) Gieriger Spieler: kauft stets das beste Verhältnis Wachstum/Kosten und wartet darauf.\n'
+    : '\n\nB) Ungeduldiger Spieler: kauft immer sofort das Billigste.\n');
+  aus+='   Erwartungswerte, ohne Pausen.\n\n';
+  aus+='Zeit      Punkte/Treffer     ZG    SI   erreicht   Ringlevel 1 .. 10\n';
+  for(const p of e.protokoll){
+    aus+=zeitName(p.t).padEnd(10)+kurz(p.ppt).padStart(14)+
+         String(p.zg).padStart(7)+String(p.si).padStart(6)+
+         ('  Ring 1-'+erreicht(p.ringe)).padStart(11)+'   '+
+         p.ringe.map(v=>String(v).padStart(3)).join(' ')+'\n';
+  }
+}
+
+aus+='\n\nGrundpreise der Ringe: '+DATA.RINGE.map(r=>'R'+r.nummer+'='+r.grundpreis.toExponential(0)).join(', ');
+aus+='\nKostenwachstum Ring-Upgrades: '+DATA.RING_UPGRADE.KOSTEN_FAKTOR+
+     ',  Wirkung: '+DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL+'\n';
+
+document.getElementById('aus').textContent=aus;
+window.ergebnisse=ergebnisse;
+</script>
+</body>
+</html>

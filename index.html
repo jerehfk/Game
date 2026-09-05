@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zielscheibe</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<main id="spiel">
+
+  <section id="bereich-scheibe">
+    <header id="anzeige">
+      <div class="wert">
+        <span id="anzeige-punkte" class="zahl">0</span>
+        <span class="einheit">Punkte</span>
+      </div>
+      <div class="wert">
+        <span id="anzeige-ppt" class="zahl mittel">1</span>
+        <span class="einheit">pro Treffer</span>
+      </div>
+      <div class="wert">
+        <span id="anzeige-pps" class="zahl klein">0</span>
+        <span class="einheit">Punkte / s</span>
+      </div>
+    </header>
+
+    <div id="scheibe-rahmen">
+      <canvas id="scheibe"></canvas>
+    </div>
+
+    <section id="statistik">
+      <h2>Statistik</h2>
+      <div class="stat-zeile"><span>Schüsse gesamt</span><b id="stat-schuesse">0</b></div>
+      <div class="stat-zeile"><span>Trefferquote</span><b id="stat-quote">–</b></div>
+      <div class="stat-zeile"><span>Spielzeit</span><b id="stat-spielzeit">0 s</b></div>
+      <h3 id="verteilung-titel">Trefferverteilung</h3>
+      <div id="verteilung"></div>
+    </section>
+  </section>
+
+  <aside id="bereich-upgrades">
+    <div class="gruppe" id="gruppe-zielgenauigkeit">
+      <h2>Zielgenauigkeit</h2>
+      <div class="gruppe-inhalt"></div>
+    </div>
+
+    <div class="gruppe" id="gruppe-schussintervall">
+      <h2>Schussintervall</h2>
+      <div class="gruppe-inhalt"></div>
+    </div>
+
+    <div class="gruppe" id="gruppe-ringe">
+      <h2>Ringe</h2>
+      <div class="gruppe-inhalt"></div>
+    </div>
+
+    <p id="wand-hinweis" hidden></p>
+
+    <div id="speicher-leiste">
+      <button type="button" id="knopf-export">Exportieren</button>
+      <button type="button" id="knopf-import">Importieren</button>
+      <button type="button" id="knopf-reset" class="gefahr">Zurücksetzen</button>
+    </div>
+  </aside>
+
+</main>
+
+<!-- Eigenes Overlay statt confirm()/prompt(): Browserdialoge halten die
+     Spielschleife an und würden den Fortschritt einfrieren. -->
+<div id="overlay" hidden>
+  <div id="overlay-fenster" role="dialog" aria-modal="true" aria-labelledby="overlay-titel">
+    <h2 id="overlay-titel"></h2>
+    <div id="overlay-text"></div>
+    <textarea id="overlay-eingabe" spellcheck="false" hidden></textarea>
+    <div id="overlay-knoepfe"></div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/logic.js"></script>
+<script src="js/state.js"></script>
+<script src="js/target.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
