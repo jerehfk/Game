@@ -299,9 +299,9 @@ const Logik = {
   /**
    * Die eine Zahlformatierung des Spiels - jede Anzeige geht hier durch.
    *
-   * Unter 10 mit zwei Nachkommastellen, bis knapp unter eine Milliarde als
-   * ganze Zahl mit Tausenderpunkten, darueber in Exponentialschreibweise.
-   * Durchgehend deutsche Schreibweise.
+   * Unter 10 zwei Nachkommastellen, bis 100 eine, bis knapp unter eine
+   * Milliarde als ganze Zahl mit Tausenderpunkten, darueber in
+   * Exponentialschreibweise. Durchgehend deutsche Schreibweise.
    */
   formatiereZahl(wert) {
     if (!isFinite(wert)) return '∞';
@@ -309,16 +309,18 @@ const Logik = {
 
     if (wert < 0) return '-' + this.formatiereZahl(-wert);
 
-    if (wert < f.KLEIN_BIS) {
-      const klein = wert.toFixed(f.NACHKOMMA_KLEIN);
-      // 9,999 rundet auf 10 und gehoert dann in den ganzzahligen Bereich -
-      // '10,00' kommt in diesem Schema sonst nirgends vor.
-      if (Number(klein) < f.KLEIN_BIS) return klein.replace('.', f.DEZIMAL_TRENNER);
-      return String(f.KLEIN_BIS);
+    // Geprueft wird gegen den gerundeten Wert: 9,999 gehoert nach dem Runden
+    // in die naechste Stufe, '10,00' kommt in diesem Schema nirgends vor.
+    const nachkomma = this.nachkommastellen(wert);
+    if (nachkomma > 0) {
+      return wert.toFixed(nachkomma).replace('.', f.DEZIMAL_TRENNER);
     }
 
     if (wert < f.EXPONENT_AB) {
-      return this.gruppiere(Math.floor(wert));
+      // Wer hier landet und trotzdem unter MITTEL_BIS liegt, wurde durch das
+      // Runden hochgeschoben (99,96): dann gilt die Grenze, nicht der
+      // abgeschnittene Wert - sonst stuende dort '99'.
+      return this.gruppiere(wert < f.MITTEL_BIS ? f.MITTEL_BIS : Math.floor(wert));
     }
 
     let exponent = Math.floor(Math.log10(wert));
@@ -337,6 +339,20 @@ const Logik = {
       .replace('.', f.DEZIMAL_TRENNER);
 
     return text + 'e' + exponent;
+  },
+
+  /**
+   * Wie viele Nachkommastellen dieser Wert bekommt; 0 heisst ganzzahlig.
+   *
+   * Entschieden wird anhand der bereits gerundeten Zahl. Sonst faenden sich
+   * Werte kurz unter einer Stufengrenze in der falschen Stufe wieder - 9,999
+   * wuerde als '10,00' erscheinen, 99,96 als '100,0'.
+   */
+  nachkommastellen(wert) {
+    const f = DATA.FORMAT;
+    if (Number(wert.toFixed(f.NACHKOMMA_KLEIN)) < f.KLEIN_BIS) return f.NACHKOMMA_KLEIN;
+    if (Number(wert.toFixed(f.NACHKOMMA_MITTEL)) < f.MITTEL_BIS) return f.NACHKOMMA_MITTEL;
+    return 0;
   },
 
   /** Ganze Zahl mit Tausendertrennern. */

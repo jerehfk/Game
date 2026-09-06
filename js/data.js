@@ -145,14 +145,19 @@ const DATA = {
    * Ring hat seinen eigenen Kostenfaktor, weil ein gemeinsamer die Staffelung
    * der Grundpreise ueber viele Level wieder einebnen wuerde.
    *
-   * Die Wirkung von 1,001 je Level ist winzig und liegt weit unter jedem
-   * Kostenfaktor, sodass jeder Ring rasch saettigt. Das ist der Sinn der
-   * Sache: das Scoring ist rueckgekoppelt - Punkte kaufen Upgrades, die den
-   * Zaehler schneller wachsen lassen, was wieder mehr Punkte gibt -, und diese
-   * Schleife soll das Spiel nicht in Minuten davontragen.
+   * Die Wirkung von 1,05 je Level liegt weit unter jedem Kostenfaktor, sodass
+   * jeder Ring saettigt - das haelt die Rueckkopplung im Zaum, in der Punkte
+   * Upgrades kaufen, die den Zaehler schneller wachsen lassen.
+   *
+   * Vorher standen hier 1,001. Das war zwar sicher, aber wirkungslos: bei
+   * Ring 1 bewegte sich die angezeigte Zahl erst nach 96 Kaeufen von 0,10 auf
+   * 0,11, zehn Level brachten zusammen ein Prozent. Mit 1,05 ist der dritte
+   * Kauf sichtbar. Das Spiel wird davon nicht fuenfzigmal schneller, weil die
+   * Kostenfaktoren begrenzen, wie viele Level ueberhaupt gekauft werden - der
+   * Zaehler steht nach einem Tag rund dreissigmal hoeher, nicht tausendmal.
    */
   RING_UPGRADE: {
-    FAKTOR_PRO_LEVEL: 1.001,
+    FAKTOR_PRO_LEVEL: 1.05,
     MAX_LEVEL: Infinity
   },
 
@@ -268,7 +273,7 @@ const DATA = {
    * eindeutig und spart das Raten, wofuer ein Buchstabe stand.
    */
   FORMAT: {
-    /** Unter diesem Wert werden Nachkommastellen gezeigt. */
+    /** Unter diesem Wert zwei Nachkommastellen. */
     KLEIN_BIS: 10,
     /**
      * Zwei Nachkommastellen unter KLEIN_BIS: am Spielanfang sind die Zahlen
@@ -276,6 +281,13 @@ const DATA = {
      * Fortschritt.
      */
     NACHKOMMA_KLEIN: 2,
+    /**
+     * Bis MITTEL_BIS noch eine Nachkommastelle. In diesem Bereich liegen die
+     * Zuwaechse der mittleren Ringe - auf ganze Zahlen gerundet verlaeren sie
+     * genau dort ihre Aufloesung, wo sie sich bewegen.
+     */
+    MITTEL_BIS: 100,
+    NACHKOMMA_MITTEL: 1,
     /** Ab hier Exponentialschreibweise. */
     EXPONENT_AB: 1e9,
     /** Nachkommastellen der Mantisse; nachlaufende Nullen entfallen. */
