@@ -73,7 +73,11 @@ function simulieren(dauer, marken, art){
     return liste;
   };
 
-  const merken=(zeit)=>protokoll.push({t:zeit,zg:s.zg,si:s.si,ringe:s.ring.slice(),ppt:s.ppt,punkte,kaeufe});
+  // Längste Pause zwischen zwei Käufen – Prüfgröße für „der Fortschritt
+  // bleibt stetig“: kein Level, ab dem tagelang gar nichts mehr passiert.
+  let laengstePause=0, pauseBei=0;
+
+  const merken=(zeit)=>protokoll.push({t:zeit,zg:s.zg,si:s.si,ringe:s.ring.slice(),ppt:s.ppt,punkte,kaeufe,laengstePause,pauseBei});
 
   while(t<dauer && kaeufe<500000){
     while(naechsteMarke<marken.length && t>=marken[naechsteMarke]){ merken(marken[naechsteMarke]); naechsteMarke++; }
@@ -105,6 +109,7 @@ function simulieren(dauer, marken, art){
     t += warten;
     punkte -= bester.kosten;
     bester.kaufen(); kaeufe++;
+    if(warten>laengstePause){ laengstePause=warten; pauseBei=t; }
   }
 
   while(naechsteMarke<marken.length){ merken(marken[naechsteMarke]); naechsteMarke++; }
@@ -112,10 +117,11 @@ function simulieren(dauer, marken, art){
 }
 
 // Marken der Zieltabelle aus dem Änderungsauftrag.
-const marken=[300,3600,8*3600,86400,3*86400,7*86400,30*86400];
+const marken=[60,900,3600,8*3600,86400,7*86400,30*86400];
 const zeitName=(t)=> t<3600 ? (t/60).toFixed(0)+' min' : (t<86400 ? (t/3600).toFixed(0)+' h' : (t/86400).toFixed(0)+' d');
 const erreicht=(ringe)=>{ let h=0; for(let i=0;i<10;i++) if(ringe[i]>1) h=i+1; return h; };
 const kurz=(v)=> v>=1e6 ? v.toExponential(2) : v.toFixed(0);
+const dauer=(s)=> s<60 ? s.toFixed(1)+' s' : (s<3600 ? (s/60).toFixed(1)+' min' : (s<86400 ? (s/3600).toFixed(1)+' h' : (s/86400).toFixed(1)+' d'));
 
 let aus='';
 const ergebnisse={};
@@ -126,13 +132,19 @@ for(const art of ['gierig','ungeduldig']){
     ? 'A) Gieriger Spieler: kauft stets das beste Verhältnis Wachstum/Kosten und wartet darauf.\n'
     : '\n\nB) Ungeduldiger Spieler: kauft immer sofort das Billigste.\n');
   aus+='   Erwartungswerte, ohne Pausen.\n\n';
-  aus+='Zeit      Punkte/Treffer     ZG    SI   erreicht   Ringlevel 1 .. 10\n';
+  aus+='Zeit      Punkte/Treffer   ZG/300  SI/200   erreicht   Ringlevel 1 .. 10   längste Pause\n';
   for(const p of e.protokoll){
     aus+=zeitName(p.t).padEnd(10)+kurz(p.ppt).padStart(14)+
-         String(p.zg).padStart(7)+String(p.si).padStart(6)+
+         String(p.zg).padStart(8)+String(p.si).padStart(8)+
          ('  Ring 1-'+erreicht(p.ringe)).padStart(11)+'   '+
-         p.ringe.map(v=>String(v).padStart(3)).join(' ')+'\n';
+         p.ringe.map(v=>String(v).padStart(3)).join(' ')+
+         ('   '+dauer(p.laengstePause)).padStart(16)+'\n';
   }
+  const letzte=e.protokoll[e.protokoll.length-1];
+  aus+='\n  Zielgenauigkeit nach 30 Tagen: '+letzte.zg+' von '+DATA.ZIELGENAUIGKEIT.MAX_LEVEL+
+       (letzte.zg>=DATA.ZIELGENAUIGKEIT.MAX_LEVEL?'  << Maximum erreicht':'  (Maximum nicht erreicht)')+'\n';
+  aus+='  Längste Pause zwischen zwei Käufen: '+dauer(letzte.laengstePause)+
+       ' (bei t = '+zeitName(letzte.pauseBei)+')\n';
 }
 
 aus+='\n\nGrundpreise der Ringe: '+DATA.RINGE.map(r=>'R'+r.nummer+'='+r.grundpreis.toExponential(0)).join(', ');

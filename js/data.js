@@ -95,13 +95,21 @@ const DATA = {
     START_STREUUNG: 0.409,
     FAKTOR_PRO_LEVEL: 0.98827,
     MAX_LEVEL: 300,
-    KOSTEN_BASIS: 20,
-    KOSTEN_FAKTOR: 1.05,
     /**
-     * Zusaetzlich alle 20 Level ein Kostensprung um Faktor 3. Diese Sprunge
-     * sind die Wand, an der die Demo endet und spaeter der Reset ansetzt.
+     * Die Preiskurve muss gegen ein Einkommen ankommen, das quadratisch mit
+     * der Zeit waechst und zusaetzlich exponentiell mit jedem Ring-Upgrade.
+     * Die frueheren 1,05 je Level stammen aus der Zeit vor der
+     * Scoring-Umstellung, als der Ertrag je Sekunde noch ungefaehr konstant
+     * war - dagegen war das Maximum binnen Minuten erreicht.
      */
-    KOSTEN_SPRUNG_FAKTOR: 3.0,
+    KOSTEN_BASIS: 100,
+    KOSTEN_FAKTOR: 1.25,
+    /**
+     * Zusaetzlich alle 20 Level ein Kostensprung um Faktor 5. Diese Sprunge
+     * sind die Wand, an der die Demo endet und spaeter der Reset ansetzt:
+     * die Zielgenauigkeit soll ihr Maximum auch nach Tagen nicht erreichen.
+     */
+    KOSTEN_SPRUNG_FAKTOR: 5.0,
     KOSTEN_SPRUNG_ALLE: 20
   },
 
@@ -113,8 +121,9 @@ const DATA = {
     START_SEKUNDEN: 3.0,
     FAKTOR_PRO_LEVEL: 0.98305,
     MAX_LEVEL: 200,
-    KOSTEN_BASIS: 40,
-    KOSTEN_FAKTOR: 1.05
+    /** Dieselbe Begruendung wie bei der Zielgenauigkeit, ohne die Sprunge. */
+    KOSTEN_BASIS: 200,
+    KOSTEN_FAKTOR: 1.25
   },
 
   /**
