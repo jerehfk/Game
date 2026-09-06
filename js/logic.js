@@ -57,8 +57,8 @@ const Logik = {
    * damit eine Entscheidung und nicht mehr nur eine Frage der Trefferquote.
    */
   kostenRing(ring, level) {
-    return DATA.RINGE[ring - 1].grundpreis
-      * Math.pow(DATA.RING_UPGRADE.KOSTEN_FAKTOR, level - 1);
+    const r = DATA.RINGE[ring - 1];
+    return r.grundpreis * Math.pow(r.kostenfaktor, level - 1);
   },
 
   /**
@@ -66,7 +66,7 @@ const Logik = {
    * Ring 1 = aussen, Ring 10 = Mitte.
    */
   ringZuwachs(ring, level) {
-    const grund = DATA.RINGE[ring - 1].grundpunkte;
+    const grund = DATA.RINGE[ring - 1].grundzuwachs;
     return grund * Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL, level - 1);
   },
 
@@ -85,10 +85,17 @@ const Logik = {
   /**
    * Ringnummer fuer einen Abstand vom Mittelpunkt.
    * 0 bedeutet daneben (Radius >= 1).
+   *
+   * Die Ringe sind unterschiedlich breit, es gibt also keine Formel mehr -
+   * gesucht wird von innen nach aussen der erste Ring, dessen Aussengrenze
+   * ueber dem Abstand liegt.
    */
   ringFuerRadius(r) {
     if (r >= DATA.SCHEIBE.RADIUS) return 0;
-    return DATA.SCHEIBE.RINGE_GESAMT - Math.floor(r / DATA.SCHEIBE.RING_BREITE);
+    for (let i = DATA.RINGE.length - 1; i >= 0; i--) {
+      if (r < DATA.RINGE[i].aussen) return DATA.RINGE[i].nummer;
+    }
+    return 0;
   },
 
   /** Einen Schuss ziehen: Koordinate, Abstand und getroffener Ring. */
@@ -96,6 +103,33 @@ const Logik = {
     const [x, y] = this.normalPaar(sigma);
     const r = Math.sqrt(x * x + y * y);
     return { x, y, r, ring: this.ringFuerRadius(r) };
+  },
+
+  /**
+   * Wo ein Schuss gezeichnet wird.
+   *
+   * Gerechnet wird mit den echten Ringgrenzen, gezeichnet mit zehn gleich
+   * breiten Ringen. Ein Treffer wird deshalb innerhalb seines Rings linear auf
+   * das Anzeige-Intervall gestreckt: er bleibt sichtbar in dem Ring, dem er
+   * zugerechnet wurde, und Ring 10 verschwindet nicht in einem halben Pixel.
+   */
+  anzeigePosition(schuss) {
+    const anzeigeRadius = this.anzeigeRadius(schuss.r, schuss.ring);
+    // Ein Volltreffer genau im Zentrum hat keine Richtung.
+    const faktor = schuss.r > 0 ? anzeigeRadius / schuss.r : 0;
+    return { x: schuss.x * faktor, y: schuss.y * faktor };
+  },
+
+  anzeigeRadius(r, ring) {
+    // Fehlschuesse liegen ausserhalb; weit entfernte werden an den Bildrand
+    // geholt, damit sie nicht aus der Leinwand fallen.
+    if (ring === 0) return Math.min(DATA.SCHEIBE.MAX_ANZEIGE_RADIUS, r);
+
+    const grenzen = DATA.RINGE[ring - 1];
+    const breite = grenzen.aussen - grenzen.innen;
+    const anteil = breite > 0 ? (r - grenzen.innen) / breite : 0;
+    return (DATA.SCHEIBE.RINGE_GESAMT - ring) * DATA.SCHEIBE.ANZEIGE_RING_BREITE
+      + anteil * DATA.SCHEIBE.ANZEIGE_RING_BREITE;
   },
 
   // --- Erwartungswerte ----------------------------------------------------
@@ -112,9 +146,8 @@ const Logik = {
     const nenner = 2 * sigma * sigma;
     const p = new Array(DATA.SCHEIBE.RINGE_GESAMT);
     for (let i = 0; i < p.length; i++) {
-      const ring = i + 1;
-      const aussen = (DATA.SCHEIBE.RINGE_GESAMT - ring + 1) * DATA.SCHEIBE.RING_BREITE;
-      const innen = (DATA.SCHEIBE.RINGE_GESAMT - ring) * DATA.SCHEIBE.RING_BREITE;
+      const innen = DATA.RINGE[i].innen;
+      const aussen = DATA.RINGE[i].aussen;
       p[i] = Math.exp(-(innen * innen) / nenner) - Math.exp(-(aussen * aussen) / nenner);
     }
     return p;

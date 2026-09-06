@@ -151,9 +151,13 @@ const Spiel = {
     const s = Logik.schuss(streuung);
     const st = spiel.statistik;
 
+    // Gerechnet wird mit dem echten Abstand, gezeichnet an der gestreckten
+    // Position - sonst laege die halbe Scheibe in einem einzigen Pixel.
+    const anzeige = Logik.anzeigePosition(s);
+
     st.schuesse++;
     Verteilung.melden(s.ring);
-    Scheibe.pfeilMerken(s.x, s.y);
+    Scheibe.pfeilMerken(anzeige.x, anzeige.y);
 
     if (s.ring > 0) {
       const zuwachs = Logik.ringZuwachs(s.ring, spiel.ringLevel[s.ring - 1]);
@@ -165,7 +169,7 @@ const Spiel = {
       spiel.punkte += spiel.punkteProTreffer;
       spiel.punkteProTreffer += zuwachs;
 
-      Scheibe.trefferMerken(s.x, s.y, s.ring, zuwachs);
+      Scheibe.trefferMerken(anzeige.x, anzeige.y, s.ring, zuwachs);
     }
   },
 

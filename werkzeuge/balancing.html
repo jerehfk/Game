@@ -17,16 +17,13 @@ function streuung(l){const z=DATA.ZIELGENAUIGKEIT;l=Math.min(l,z.MAX_LEVEL);retu
 function intervall(l){const s=DATA.SCHUSSINTERVALL;l=Math.min(l,s.MAX_LEVEL);return s.START_SEKUNDEN*Math.pow(s.FAKTOR_PRO_LEVEL,l-1);}
 function kostenZG(l){const z=DATA.ZIELGENAUIGKEIT;return z.KOSTEN_BASIS*Math.pow(z.KOSTEN_FAKTOR,l-1)*Math.pow(z.KOSTEN_SPRUNG_FAKTOR,Math.floor((l-1)/z.KOSTEN_SPRUNG_ALLE));}
 function kostenSI(l){const s=DATA.SCHUSSINTERVALL;return s.KOSTEN_BASIS*Math.pow(s.KOSTEN_FAKTOR,l-1);}
-function kostenRing(ring,l){return DATA.RINGE[ring-1].grundpreis*Math.pow(DATA.RING_UPGRADE.KOSTEN_FAKTOR,l-1);}
-function ringZuwachs(ring,l){return DATA.RINGE[ring-1].grundpunkte*Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL,l-1);}
+function kostenRing(ring,l){const r=DATA.RINGE[ring-1];return r.grundpreis*Math.pow(r.kostenfaktor,l-1);}
+function ringZuwachs(ring,l){return DATA.RINGE[ring-1].grundzuwachs*Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL,l-1);}
 
+// Die Ringe sind unterschiedlich breit; die Grenzen stehen in DATA.RINGE.
 function wahrscheinlichkeiten(sigma){
-  const n=2*sigma*sigma, p=[];
-  for(let ring=1;ring<=10;ring++){
-    const a=(10-ring+1)*0.1, i=(10-ring)*0.1;
-    p.push(Math.exp(-(i*i)/n)-Math.exp(-(a*a)/n));
-  }
-  return p; // Index 0 = Ring 1 (außen)
+  const n=2*sigma*sigma;
+  return DATA.RINGE.map(r=>Math.exp(-(r.innen*r.innen)/n)-Math.exp(-(r.aussen*r.aussen)/n));
 }
 function trefferquote(sigma){ return 1-Math.exp(-1/(2*sigma*sigma)); }
 
@@ -139,8 +136,9 @@ for(const art of ['gierig','ungeduldig']){
 }
 
 aus+='\n\nGrundpreise der Ringe: '+DATA.RINGE.map(r=>'R'+r.nummer+'='+r.grundpreis.toExponential(0)).join(', ');
-aus+='\nKostenwachstum Ring-Upgrades: '+DATA.RING_UPGRADE.KOSTEN_FAKTOR+
-     ',  Wirkung: '+DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL+'\n';
+aus+='\nKostenfaktoren je Ring:  '+DATA.RINGE.map(r=>r.kostenfaktor.toFixed(2)).join(', ');
+aus+='\nGrundzuwächse:  '+DATA.RINGE.map(r=>r.grundzuwachs.toExponential(2)).join(', ');
+aus+='\nWirkung je Ring-Level: '+DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL+'\n';
 
 document.getElementById('aus').textContent=aus;
 window.ergebnisse=ergebnisse;

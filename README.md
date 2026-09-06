@@ -6,11 +6,21 @@ präziser und schneller.
 
 Jeder Treffer bringt gleich viel ein – den aktuellen Stand von
 **punkteProTreffer** – und hebt diesen Zähler anschließend um den Zuwachs des
-getroffenen Rings (Gold 89, Außenring 1, dazwischen die Fibonacci-Reihe). Ein
-guter Treffer wirkt damit dauerhaft auf jeden folgenden. Weil der Zähler
+getroffenen Rings. Der Zuwachs ist die Wurzel aus dem Startpreis des Rings
+(Außenring 2, Gold 4,39 Mrd.), steht aber als feste Tabelle in `js/data.js`.
+Ein guter Treffer wirkt damit dauerhaft auf jeden folgenden. Weil der Zähler
 mitwächst, wachsen die Punkte über die Zeit quadratisch – die geschlossene
 Form dafür steht in `Logik.ertragUeberZeit` und trägt sowohl den
 Offline-Fortschritt als auch die angezeigten Wartezeiten.
+
+## Zwei Geometrien
+
+Die Ringe sind **nicht gleich breit**: Ring 1 reicht von Radius 0,41 bis 1,
+Ring 10 nur bis 0,0041. Nur so landen zu Spielbeginn 55 % der Pfeile außen
+statt innen. Gezeichnet wird trotzdem jeder Ring gleich breit, sonst wäre die
+halbe Scheibe schmaler als ein Pixel: `Logik.anzeigePosition` streckt jeden
+Treffer innerhalb seines Rings auf das Anzeige-Intervall. Gerechnet wird immer
+mit den echten Grenzen aus `DATA.RINGE`.
 
 `index.html` im Browser öffnen – kein Build-Schritt, keine Abhängigkeiten,
 keine Server.

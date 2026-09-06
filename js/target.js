@@ -96,7 +96,7 @@ const Scheibe = {
     // Von aussen nach innen: jeder Ring ist eine volle Scheibe, die den
     // naechstgroesseren ueberdeckt. Index 0 ist Ring 1 (aussen).
     for (let i = 0; i < DATA.RINGE.length; i++) {
-      const radius = (DATA.SCHEIBE.RINGE_GESAMT - i) * DATA.SCHEIBE.RING_BREITE;
+      const radius = (DATA.SCHEIBE.RINGE_GESAMT - i) * DATA.SCHEIBE.ANZEIGE_RING_BREITE;
       ctx.beginPath();
       ctx.arc(mitte, mitte, radius * this.einheit, 0, Math.PI * 2);
       ctx.fillStyle = DATA.RINGE[i].farbe;
@@ -168,7 +168,7 @@ const Scheibe = {
     const a = DATA.ANIMATION;
     const ctx = this.ctx;
     const mitte = this.groesse / 2;
-    const breite = DATA.SCHEIBE.RING_BREITE * this.einheit;
+    const breite = DATA.SCHEIBE.ANZEIGE_RING_BREITE * this.einheit;
 
     for (let i = 0; i < this.ringBlitz.length; i++) {
       const rest = 1 - (jetzt - this.ringBlitz[i]) / a.RINGBLITZ_DAUER;
@@ -177,7 +177,7 @@ const Scheibe = {
       // Als Band gezeichnet statt als gefuellte Scheibe: sonst wuerde der
       // Blitz alle weiter innen liegenden Ringe mit ueberdecken.
       const ring = i + 1;
-      const aussen = (DATA.SCHEIBE.RINGE_GESAMT - ring + 1) * DATA.SCHEIBE.RING_BREITE;
+      const aussen = (DATA.SCHEIBE.RINGE_GESAMT - ring + 1) * DATA.SCHEIBE.ANZEIGE_RING_BREITE;
       ctx.beginPath();
       ctx.arc(mitte, mitte, aussen * this.einheit - breite / 2, 0, Math.PI * 2);
       ctx.lineWidth = breite;
