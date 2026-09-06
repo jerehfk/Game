@@ -119,11 +119,16 @@ const DATA = {
 
   /**
    * Schussintervall: Sekunden zwischen zwei Schuessen.
-   * Level 1 => 3,0 s, Level 200 => 0,1 s (zehn Pfeile pro Sekunde).
+   * Level 1 => 1,0 s, Level 200 => 0,1 s (zehn Pfeile pro Sekunde).
+   *
+   * Der Startwert liegt bei 1,0 s statt frueher 3,0 s: in der ersten Ebene ist
+   * das Intervall-Upgrade gesperrt, es bliebe sonst den ganzen Durchgang bei
+   * zwanzig Schuessen pro Minute - und Zuschauen ist hier die
+   * Hauptbeschaeftigung.
    */
   SCHUSSINTERVALL: {
-    START_SEKUNDEN: 3.0,
-    FAKTOR_PRO_LEVEL: 0.98305,
+    START_SEKUNDEN: 1.0,
+    FAKTOR_PRO_LEVEL: 0.98855,
     MAX_LEVEL: 200,
     /** Dieselbe Begruendung wie bei der Zielgenauigkeit, ohne die Sprunge. */
     KOSTEN_BASIS: 200,
@@ -149,6 +154,20 @@ const DATA = {
   RING_UPGRADE: {
     FAKTOR_PRO_LEVEL: 1.001,
     MAX_LEVEL: Infinity
+  },
+
+  /**
+   * Welche Achsen die aktuelle Ebene ueberhaupt anbietet.
+   *
+   * Zielgenauigkeit und Schussintervall sind in der ersten Ebene gesperrt und
+   * werden erst nach dem ersten Prestige freigeschaltet. Ihr Code bleibt
+   * vollstaendig erhalten - Formeln, Maximallevel, Preise -, er wird nur nicht
+   * angesprochen, solange dieser Schalter aus ist. Ihn spaeter umzulegen ist
+   * eine Zeile; den Code jetzt zu loeschen und dann neu zu schreiben waere
+   * Verschwendung.
+   */
+  EBENE: {
+    GLOBALE_UPGRADES_FREI: false
   },
 
   /**

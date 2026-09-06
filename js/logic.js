@@ -330,6 +330,14 @@ const Upgrades = {
   aufbauen() {
     this.alle = [];
 
+    // In der ersten Ebene gibt es nur die zehn Ring-Upgrades. Die beiden
+    // globalen Achsen bleiben als Code stehen und kommen mit dem Prestige
+    // zurueck - siehe DATA.EBENE.
+    if (DATA.EBENE.GLOBALE_UPGRADES_FREI) this.globaleAufbauen();
+    this.ringeAufbauen();
+  },
+
+  globaleAufbauen() {
     this.alle.push({
       id: 'zielgenauigkeit',
       gruppe: 'zielgenauigkeit',
@@ -360,7 +368,9 @@ const Upgrades = {
       },
       anheben: () => { spiel.schussintervallLevel++; }
     });
+  },
 
+  ringeAufbauen() {
     // Von der Mitte nach aussen aufgelistet: Ring 10 steht oben, weil er das
     // langfristige Ziel ist, auch wenn er sich erst spaet lohnt.
     for (let ring = DATA.SCHEIBE.RINGE_GESAMT; ring >= 1; ring--) {

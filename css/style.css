@@ -42,15 +42,28 @@ h3 {
   color: var(--text-leise);
 }
 
+/* Links Scheibe und die zehn Ring-Upgrades, rechts nur die Statistiken.
+   Die rechte Spalte ist schmal und bleibt beim Scrollen stehen - sie hat
+   wenig Inhalt, soll aber neben der langen linken Spalte lesbar bleiben. */
 #spiel {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(340px, 420px);
+  grid-template-columns: minmax(320px, 1fr) minmax(240px, 300px);
   gap: 22px;
   max-width: 1240px;
   margin: 0 auto;
   padding: 22px;
   align-items: start;
 }
+
+#bereich-statistik { position: sticky; top: 22px; }
+#gruppe-statistiken .stat-zeile { padding: 5px 0; font-size: 13px; }
+#gruppe-statistiken .stat-zeile b {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+}
+
+#gruppe-ringe { margin-top: 18px; }
+#verteilung-block .stat-zeile { margin-top: 10px; }
 
 /* --- Linke Spalte: Scheibe ---------------------------------------------- */
 
@@ -79,6 +92,7 @@ h3 {
 .einheit { font-size: 12px; color: var(--text-leise); }
 
 #scheibe-rahmen {
+  max-width: 560px;
   background: var(--scheibe-hintergrund);
   border: 1px solid var(--rand);
   border-radius: var(--radius);
@@ -88,15 +102,7 @@ h3 {
 
 #scheibe { width: 100%; height: auto; display: block; }
 
-/* --- Statistik ----------------------------------------------------------- */
-
-#statistik {
-  margin-top: 18px;
-  background: var(--flaeche);
-  border: 1px solid var(--rand);
-  border-radius: var(--radius);
-  padding: 14px 16px 16px;
-}
+/* --- Statistik und Trefferverteilung ------------------------------------- */
 
 .stat-zeile {
   display: flex;
@@ -133,7 +139,7 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Rechte Spalte: Upgrades --------------------------------------------- */
+/* --- Karten und Upgrade-Zeilen ------------------------------------------- */
 
 .gruppe {
   background: var(--flaeche);
@@ -267,6 +273,7 @@ button.gefahr:hover { border-color: var(--gefahr); }
 
 @media (max-width: 860px) {
   #spiel { grid-template-columns: 1fr; padding: 14px; }
+  #bereich-statistik { position: static; }
   .zahl { font-size: 26px; }
   .zahl.mittel { font-size: 22px; }
 }

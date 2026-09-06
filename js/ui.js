@@ -18,6 +18,8 @@ const UI = {
     k.punkte = document.getElementById('anzeige-punkte');
     k.ppt = document.getElementById('anzeige-ppt');
     k.pps = document.getElementById('anzeige-pps');
+    k.statPpt = document.getElementById('stat-ppt');
+    k.statPps = document.getElementById('stat-pps');
     k.schuesse = document.getElementById('stat-schuesse');
     k.quote = document.getElementById('stat-quote');
     k.spielzeit = document.getElementById('stat-spielzeit');
@@ -95,6 +97,9 @@ const UI = {
 
   /** Fuer jedes Upgrade eine Zeile in der passenden Gruppe. */
   upgradesBauen() {
+    // In der ersten Ebene liefert Upgrades.alle nur Ring-Upgrades; die
+    // Zuordnung bleibt trotzdem allgemein, damit die gesperrten Achsen nach
+    // dem Prestige ohne Umbau wieder eine Gruppe finden.
     const gruppen = {
       zielgenauigkeit: document.querySelector('#gruppe-zielgenauigkeit .gruppe-inhalt'),
       schussintervall: document.querySelector('#gruppe-schussintervall .gruppe-inhalt'),
@@ -102,6 +107,7 @@ const UI = {
     };
 
     for (const u of Upgrades.alle) {
+      if (!gruppen[u.gruppe]) continue;
       const knopf = document.createElement('button');
       knopf.type = 'button';
       knopf.className = 'upgrade';
@@ -211,11 +217,18 @@ const UI = {
     const k = this.knoten;
     const st = spiel.statistik;
 
-    k.punkte.textContent = Logik.formatiereZahl(spiel.punkte);
-    k.ppt.textContent = Logik.formatiereZahl(spiel.punkteProTreffer);
-    k.pps.textContent = Logik.formatiereZahl(Logik.punkteProSekunde(spiel));
+    const proTreffer = Logik.formatiereZahl(spiel.punkteProTreffer);
+    const proSekunde = Logik.formatiereZahl(Logik.punkteProSekunde(spiel));
 
-    k.schuesse.textContent = Logik.formatiereZahl(Math.floor(st.schuesse));
+    k.punkte.textContent = Logik.formatiereZahl(spiel.punkte);
+    k.ppt.textContent = proTreffer;
+    k.pps.textContent = proSekunde;
+
+    k.statPpt.textContent = proTreffer;
+    k.statPps.textContent = proSekunde;
+    // Schuesse sind gezaehlte Ereignisse, keine Groesse: bei ihnen waeren die
+    // zwei Nachkommastellen der kleinen Zahlen ("5,00") schlicht falsch.
+    k.schuesse.textContent = Logik.gruppiere(Math.floor(st.schuesse));
     k.quote.textContent = st.schuesse > 0
       ? (100 * st.treffer / st.schuesse).toFixed(1).replace('.', DATA.FORMAT.DEZIMAL_TRENNER) + ' %'
       : '–';

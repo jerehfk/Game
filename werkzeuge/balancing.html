@@ -64,10 +64,13 @@ function simulieren(dauer, marken, art){
 
   const kandidaten=()=>{
     const liste=[];
-    if(s.zg<DATA.ZIELGENAUIGKEIT.MAX_LEVEL)
-      liste.push({kosten:kostenZG(s.zg),kaufen:()=>s.zg++,zurueck:()=>s.zg--});
-    if(s.si<DATA.SCHUSSINTERVALL.MAX_LEVEL)
-      liste.push({kosten:kostenSI(s.si),kaufen:()=>s.si++,zurueck:()=>s.si--});
+    // In der ersten Ebene sind die beiden globalen Achsen gesperrt.
+    if(DATA.EBENE.GLOBALE_UPGRADES_FREI){
+      if(s.zg<DATA.ZIELGENAUIGKEIT.MAX_LEVEL)
+        liste.push({kosten:kostenZG(s.zg),kaufen:()=>s.zg++,zurueck:()=>s.zg--});
+      if(s.si<DATA.SCHUSSINTERVALL.MAX_LEVEL)
+        liste.push({kosten:kostenSI(s.si),kaufen:()=>s.si++,zurueck:()=>s.si--});
+    }
     for(let i=0;i<10;i++)
       liste.push({kosten:kostenRing(i+1,s.ring[i]),kaufen:()=>s.ring[i]++,zurueck:()=>s.ring[i]--});
     return liste;

@@ -194,8 +194,16 @@ const Speicher = {
         DATA.SCORING.START_PUNKTE_PRO_TREFFER,
         zahl(daten.punkteProTreffer, DATA.SCORING.START_PUNKTE_PRO_TREFFER)
       ),
-      zielgenauigkeitLevel: level(daten.zielgenauigkeitLevel, DATA.ZIELGENAUIGKEIT.MAX_LEVEL),
-      schussintervallLevel: level(daten.schussintervallLevel, DATA.SCHUSSINTERVALL.MAX_LEVEL),
+      // Solange die globalen Achsen gesperrt sind, werden ihre Level auf 1
+      // geklemmt. Ein Stand aus einer Fassung, in der sie kaufbar waren, wuerde
+      // sonst mit Werten weiterlaufen, die in dieser Ebene niemand erreichen
+      // kann. Gespeichert bleiben die Felder, damit spaetere Staende passen.
+      zielgenauigkeitLevel: DATA.EBENE.GLOBALE_UPGRADES_FREI
+        ? level(daten.zielgenauigkeitLevel, DATA.ZIELGENAUIGKEIT.MAX_LEVEL)
+        : 1,
+      schussintervallLevel: DATA.EBENE.GLOBALE_UPGRADES_FREI
+        ? level(daten.schussintervallLevel, DATA.SCHUSSINTERVALL.MAX_LEVEL)
+        : 1,
       ringLevel: frisch.ringLevel,
       statistik: frisch.statistik,
       zuletztGespeichert: zahl(daten.zuletztGespeichert, Date.now())
