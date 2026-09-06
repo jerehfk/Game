@@ -18,7 +18,11 @@ function intervall(l){const s=DATA.SCHUSSINTERVALL;l=Math.min(l,s.MAX_LEVEL);ret
 function kostenZG(l){const z=DATA.ZIELGENAUIGKEIT;return z.KOSTEN_BASIS*Math.pow(z.KOSTEN_FAKTOR,l-1)*Math.pow(z.KOSTEN_SPRUNG_FAKTOR,Math.floor((l-1)/z.KOSTEN_SPRUNG_ALLE));}
 function kostenSI(l){const s=DATA.SCHUSSINTERVALL;return s.KOSTEN_BASIS*Math.pow(s.KOSTEN_FAKTOR,l-1);}
 function kostenRing(ring,l){const r=DATA.RINGE[ring-1];return r.grundpreis*Math.pow(r.kostenfaktor,l-1);}
-function ringZuwachs(ring,l){return DATA.RINGE[ring-1].grundzuwachs*Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL,l-1);}
+function ringFaktor(asc){const a=DATA.ASCENSION;return Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL, a.Y_BASIS+a.Y_JE_ASCENSION*asc);}
+function ringMaxLevel(asc){const a=DATA.ASCENSION;return a.MAX_LEVEL_BASIS+a.MAX_LEVEL_JE_ASCENSION*asc;}
+function ascensionPreis(ring,asc){const a=DATA.ASCENSION,r=DATA.RINGE[ring-1];
+  return a.PREIS_VIELFACHES*r.grundpreis*(ringZuwachs(ring,ringMaxLevel(asc),asc)/r.grundzuwachs)*Math.pow(a.PREIS_WACHSTUM,asc);}
+function ringZuwachs(ring,l,asc){return DATA.RINGE[ring-1].grundzuwachs*Math.pow(ringFaktor(asc),l-1);}
 
 // Die Ringe sind unterschiedlich breit; die Grenzen stehen in DATA.RINGE.
 function wahrscheinlichkeiten(sigma){
@@ -34,7 +38,7 @@ function f(s){ return trefferquote(streuung(s.zg))/intervall(s.si); }
 function z(s){
   const sigma=streuung(s.zg), p=wahrscheinlichkeiten(sigma);
   let summe=0;
-  for(let i=0;i<10;i++) summe+=p[i]*ringZuwachs(i+1,s.ring[i]);
+  for(let i=0;i<10;i++) summe+=p[i]*ringZuwachs(i+1,s.ring[i],s.asc[i]);
   return summe/trefferquote(sigma);
 }
 
@@ -57,7 +61,7 @@ function wartezeit(s, punkte, kosten){
 }
 
 function simulieren(dauer, marken, art){
-  const s={zg:1,si:1,ring:new Array(10).fill(1),ppt:DATA.SCORING.START_PUNKTE_PRO_TREFFER};
+  const s={zg:1,si:1,ring:new Array(10).fill(1),asc:new Array(10).fill(0),ppt:DATA.SCORING.START_PUNKTE_PRO_TREFFER};
   let punkte=0, t=0, kaeufe=0;
   const protokoll=[];
   let naechsteMarke=0;
@@ -71,10 +75,19 @@ function simulieren(dauer, marken, art){
       if(s.si<DATA.SCHUSSINTERVALL.MAX_LEVEL)
         liste.push({kosten:kostenSI(s.si),kaufen:()=>s.si++,zurueck:()=>s.si--});
     }
-    // Ein Ring ist erst kaufbar, wenn der Ring davor sein Freischaltlevel hat.
+    // Ein Ring ist erst kaufbar, wenn der Ring davor sein Freischaltlevel hat
+    // oder schon aufgestiegen ist.
     for(let i=0;i<10;i++){
-      if(i>0 && s.ring[i-1] < DATA.EBENE.RING_FREI_AB_LEVEL) break;
-      liste.push({kosten:kostenRing(i+1,s.ring[i]),kaufen:()=>s.ring[i]++,zurueck:()=>s.ring[i]--});
+      if(i>0 && s.ring[i-1] < DATA.EBENE.RING_FREI_AB_LEVEL && s.asc[i-1]===0) break;
+      if(s.ring[i] < ringMaxLevel(s.asc[i])){
+        liste.push({kosten:kostenRing(i+1,s.ring[i]),kaufen:()=>s.ring[i]++,zurueck:()=>s.ring[i]--});
+      } else {
+        // Am Maximallevel bleibt nur der Aufstieg. Wann er genommen wird,
+        // entscheidet die Strategie weiter unten.
+        liste.push({kosten:ascensionPreis(i+1,s.asc[i]), istAscension:true,
+          kaufen:()=>{ s.asc[i]++; s.ring[i]=1; },
+          zurueck:()=>{ s.asc[i]--; s.ring[i]=ringMaxLevel(s.asc[i]); }});
+      }
     }
     return liste;
   };
@@ -83,7 +96,7 @@ function simulieren(dauer, marken, art){
   // bleibt stetig“: kein Level, ab dem tagelang gar nichts mehr passiert.
   let laengstePause=0, pauseBei=0;
 
-  const merken=(zeit)=>protokoll.push({t:zeit,zg:s.zg,si:s.si,ringe:s.ring.slice(),ppt:s.ppt,punkte,kaeufe,laengstePause,pauseBei});
+  const merken=(zeit)=>protokoll.push({t:zeit,zg:s.zg,si:s.si,ringe:s.ring.slice(),asc:s.asc.slice(),ppt:s.ppt,punkte,kaeufe,laengstePause,pauseBei});
 
   while(t<dauer && kaeufe<500000){
     while(naechsteMarke<marken.length && t>=marken[naechsteMarke]){ merken(marken[naechsteMarke]); naechsteMarke++; }
@@ -91,16 +104,30 @@ function simulieren(dauer, marken, art){
     const liste=kandidaten();
     let bester=null,besteBewertung=-Infinity;
 
-    if(art==='gierig'){
+    // Ein Aufstieg senkt den Zuwachs kurzfristig; nach dem Verhältnis
+    // Wachstum zu Kosten wäre er immer negativ. Der gierige Spieler steigt
+    // deshalb nur auf, wenn ihm nichts anderes bleibt - der ungeduldige, wenn
+    // der Aufstieg gerade der billigste Posten ist. Die beiden Zeilen sind
+    // damit die Bandbreite: wer nie aufsteigt und wer früh aufsteigt.
+    const aufstiege=liste.filter(k=>k.istAscension);
+    const sonstige=liste.filter(k=>!k.istAscension);
+
+    if(sonstige.length===0){
+      // Alles gedeckelt: dann bleibt nur der billigste Aufstieg.
+      bester=aufstiege.reduce((a,b)=>a.kosten<=b.kosten?a:b);
+    } else if(art==='gierig'){
       // Bewertet wird der Zuwachs am Wachstum von punkteProTreffer je Kosten.
       // Über längere Zeit dominiert der quadratische Term, also ist das
       // Wachstum und nicht das Momentaneinkommen die richtige Zielgröße.
       const jetzt=wachstum(s);
-      for(const k of liste){
+      for(const k of sonstige){
         k.kaufen(); const bewertung=(wachstum(s)-jetzt)/k.kosten; k.zurueck();
         if(bewertung>besteBewertung){besteBewertung=bewertung;bester=k;}
       }
     } else {
+      // Der ungeduldige Spieler behandelt den Aufstieg wie jeden anderen Kauf:
+      // er nimmt, was gerade am billigsten ist. Damit steigt er auf, sobald
+      // kein Ringlevel mehr guenstiger ist - ohne Sonderregel.
       for(const k of liste){
         if(-k.kosten>besteBewertung){besteBewertung=-k.kosten;bester=k;}
       }
@@ -143,7 +170,7 @@ for(const art of ['gierig','ungeduldig']){
     aus+=zeitName(p.t).padEnd(10)+kurz(p.ppt).padStart(14)+
          String(p.zg).padStart(8)+String(p.si).padStart(8)+
          ('  Ring 1-'+erreicht(p.ringe)).padStart(11)+'   '+
-         p.ringe.map(v=>String(v).padStart(3)).join(' ')+
+         p.ringe.map((v,i)=>String(v)+(p.asc[i]>0?'a'+p.asc[i]:'')).map(v=>v.padStart(4)).join(' ')+
          ('   '+dauer(p.laengstePause)).padStart(16)+'\n';
   }
   const letzte=e.protokoll[e.protokoll.length-1];

@@ -26,6 +26,8 @@ const Zustand = {
       zielgenauigkeitLevel: 1,
       schussintervallLevel: 1,
       ringLevel: new Array(DATA.SCHEIBE.RINGE_GESAMT).fill(1),
+      /** Aufstiege je Ring; hebt Maximallevel und Wirkung, startet bei 0. */
+      ascensions: new Array(DATA.SCHEIBE.RINGE_GESAMT).fill(0),
       statistik: {
         schuesse: 0,
         treffer: 0,
@@ -207,6 +209,7 @@ const Speicher = {
         ? level(daten.schussintervallLevel, DATA.SCHUSSINTERVALL.MAX_LEVEL)
         : 1,
       ringLevel: frisch.ringLevel,
+      ascensions: frisch.ascensions,
       statistik: frisch.statistik,
       kaufMengeIndex: (Number.isInteger(daten.kaufMengeIndex)
         && daten.kaufMengeIndex >= 0
@@ -214,9 +217,18 @@ const Speicher = {
       zuletztGespeichert: zahl(daten.zuletztGespeichert, Date.now())
     };
 
+    // Erst die Aufstiege, dann die Level: das Maximallevel eines Rings haengt
+    // an seinen Ascensions, gegen das geklemmt wird.
+    if (Array.isArray(daten.ascensions)) {
+      for (let i = 0; i < stand.ascensions.length; i++) {
+        stand.ascensions[i] = Math.max(0, Math.floor(zahl(daten.ascensions[i], 0)));
+      }
+    }
+
     if (Array.isArray(daten.ringLevel)) {
       for (let i = 0; i < stand.ringLevel.length; i++) {
-        stand.ringLevel[i] = level(daten.ringLevel[i], DATA.RING_UPGRADE.MAX_LEVEL);
+        const max = Logik.ringMaxLevel(i + 1, stand.ascensions[i]);
+        stand.ringLevel[i] = level(daten.ringLevel[i], max);
       }
     }
 

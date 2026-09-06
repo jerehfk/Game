@@ -78,9 +78,8 @@ const UI = {
   // --- Linke Spalte: Ring-Karten ------------------------------------------
 
   /**
-   * Sichtbar sind alle freigeschalteten Ringe von 1 nach 10, dazu der
-   * naechste als nicht anklickbare Vorschau. Neu gebaut wird nur, wenn ein
-   * Ring dazukommt.
+   * Sichtbar sind die freigeschalteten Ringe von 1 nach 10 - und sonst
+   * nichts. Neu gebaut wird nur, wenn ein Ring dazukommt.
    */
   listeBauen() {
     const hoechster = Logik.hoechsterFreierRing();
@@ -113,10 +112,6 @@ const UI = {
         this.knoten.liste.appendChild(karte);
       }
     }
-
-    if (hoechster < DATA.SCHEIBE.RINGE_GESAMT) {
-      this.knoten.liste.appendChild(this.vorschauBauen(hoechster + 1));
-    }
   },
 
   ringKarteBauen(ring) {
@@ -134,27 +129,14 @@ const UI = {
     karte.append(oben, unten);
 
     karte.addEventListener('click', () => {
-      if (Upgrades.kaufenMenge(u)) this.aktualisieren();
+      // Am Maximallevel ist dieselbe Karte der Ascension-Knopf.
+      const erfolg = Logik.ringAmMaximum(ring)
+        ? Upgrades.ascension(ring)
+        : Upgrades.kaufenMenge(u);
+      if (erfolg) this.aktualisieren();
     });
 
     this.ringZeilen[ring] = { u, karte, oben, unten };
-    return karte;
-  },
-
-  /** Der naechste, noch gesperrte Ring - gestrichelt und ohne Funktion. */
-  vorschauBauen(ring) {
-    const karte = document.createElement('div');
-    karte.className = 'ring vorschau';
-
-    const oben = document.createElement('span');
-    oben.className = 'oben';
-    oben.textContent = 'Ring ' + ring;
-
-    const unten = document.createElement('span');
-    unten.className = 'unten';
-    unten.textContent = 'ab Level ' + DATA.EBENE.RING_FREI_AB_LEVEL + ' von Ring ' + (ring - 1);
-
-    karte.append(oben, unten);
     return karte;
   },
 
@@ -170,16 +152,28 @@ const UI = {
       const z = this.ringZeilen[schluessel];
       const ring = z.u.ring;
       const level = z.u.level();
+      const maxLevel = Logik.ringMaxLevel(ring);
+      const ascensions = spiel.ascensions[ring - 1];
 
-      z.oben.textContent = 'Ring ' + ring + ' · Lvl ' + level;
+      z.oben.textContent = 'Ring ' + ring + ' · Lvl ' + level + '/' + maxLevel
+        + (ascensions > 0 ? ' · Asc ' + ascensions : '');
 
-      const anzahl = Upgrades.anzahlFuer(z.u);
-      const kosten = z.u.kostenFuer(Math.max(1, anzahl));
-      z.unten.textContent = '+' + Logik.formatiereZahl(Logik.ringZuwachs(ring, level))
-        + ' je Treffer · ' + Logik.formatiereZahl(kosten);
+      let bezahlbar;
+      if (Logik.ringAmMaximum(ring)) {
+        // Am Maximum wird die Karte zum Ascension-Knopf und hebt sich ab.
+        const preis = Logik.ascensionPreis(ring);
+        z.unten.textContent = 'Ascension · ' + Logik.formatiereZahl(preis);
+        bezahlbar = spiel.punkte >= preis;
+      } else {
+        const anzahl = Upgrades.anzahlFuer(z.u);
+        const kosten = z.u.kostenFuer(Math.max(1, anzahl));
+        z.unten.textContent = '+' + Logik.formatiereZahl(Logik.ringZuwachs(ring, level))
+          + ' je Treffer · ' + Logik.formatiereZahl(kosten);
+        bezahlbar = anzahl > 0 && spiel.punkte >= kosten;
+      }
 
-      // Arm heisst: die gewaehlte Menge ist gerade nicht zu bezahlen.
-      const bezahlbar = anzahl > 0 && spiel.punkte >= kosten;
+      z.karte.classList.toggle('ascension', Logik.ringAmMaximum(ring));
+      // Arm heisst: der anstehende Kauf ist gerade nicht zu bezahlen.
       z.karte.classList.toggle('arm', !bezahlbar);
       z.karte.disabled = !bezahlbar;
     }

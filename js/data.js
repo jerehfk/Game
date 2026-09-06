@@ -157,8 +157,52 @@ const DATA = {
    * Zaehler steht nach einem Tag rund dreissigmal hoeher, nicht tausendmal.
    */
   RING_UPGRADE: {
-    FAKTOR_PRO_LEVEL: 1.05,
-    MAX_LEVEL: Infinity
+    FAKTOR_PRO_LEVEL: 1.05
+  },
+
+  /**
+   * Ascension - die Ebene unter dem eigentlichen Prestige, je Ring einzeln.
+   *
+   * Jeder Ring hat ein Maximallevel. Wer es erreicht, kann den Ring gegen
+   * Bezahlung auf Level 1 zuruecksetzen; dafuer steigt sein Maximum, und jedes
+   * kuenftige Level wirkt staerker. Punkte und alle anderen Ringe bleiben
+   * unangetastet - es gibt hier keinen globalen Reset.
+   *
+   *   maxLevel = MAX_LEVEL_BASIS + MAX_LEVEL_JE_ASCENSION * ascensions
+   *   y        = Y_BASIS + Y_JE_ASCENSION * ascensions
+   *   faktor   = RING_UPGRADE.FAKTOR_PRO_LEVEL ^ y
+   *
+   * Der Preis bemisst sich am erreichten Zuwachs, nicht am Maximallevel:
+   *
+   *   Preis = PREIS_VIELFACHES * Grundpreis[Ring]
+   *         * (Zuwachs bei maxLevel / Grundzuwachs[Ring])
+   *         * PREIS_WACHSTUM ^ ascensions
+   *
+   * Der mittlere Faktor ist das Vielfache, auf das der Ring seinen Zuwachs
+   * hochgearbeitet hat. Dass der Preis daran haengt, ist der entscheidende
+   * Punkt: Ein Preis am Maximallevel waechst im Logarithmus nur linear mit der
+   * Zahl der Aufstiege, der Ertrag dagegen quadratisch - Maximallevel und
+   * Exponent y steigen beide linear und multiplizieren sich im Exponenten. Ab
+   * etwa dem 37. Aufstieg zahlte sich jeder weitere sofort aus und der Zaehler
+   * lief davon. Haengt der Preis am Zuwachs, kuerzt sich dieser quadratische
+   * Teil heraus.
+   *
+   * PREIS_WACHSTUM bleibt danach als eigentliche Bremse: jeder Aufstieg kostet
+   * im Verhaeltnis zu dem, was er bringt, das Doppelte des vorigen. Damit
+   * waechst auch die Wartezeit je Aufstieg geometrisch.
+   *
+   * Grundpreis[Ring] steht weiterhin im Preis, damit die Staffelung der Ringe
+   * erhalten bleibt - sonst kostete der Aufstieg von Ring 10 so viel wie der
+   * von Ring 1, obwohl seine Level milliardenfach teurer sind.
+   */
+  ASCENSION: {
+    MAX_LEVEL_BASIS: 25,
+    MAX_LEVEL_JE_ASCENSION: 10,
+    Y_BASIS: 1,
+    Y_JE_ASCENSION: 0.1,
+    /** So gewaehlt, dass der erste Aufstieg von Ring 1 rund 38.700 kostet. */
+    PREIS_VIELFACHES: 3000,
+    PREIS_WACHSTUM: 2
   },
 
   /**

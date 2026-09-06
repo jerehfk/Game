@@ -79,10 +79,16 @@ const Logik = {
    * Zehntausende Durchlaeufe je Frame.
    */
   maxKaufbareRingLevel(ring, level, guthaben) {
+    // Ueber das Maximallevel hinaus geht nichts - auch nicht mit MAX.
+    const rest = this.ringMaxLevel(ring) - level;
+    if (rest <= 0) return 0;
+
     const start = this.kostenRing(ring, level);
     if (guthaben < start) return 0;
+
     const q = DATA.RINGE[ring - 1].kostenfaktor;
-    return Math.floor(Math.log(1 + guthaben * (q - 1) / start) / Math.log(q));
+    const bezahlbar = Math.floor(Math.log(1 + guthaben * (q - 1) / start) / Math.log(q));
+    return Math.min(bezahlbar, rest);
   },
 
   /**
@@ -91,7 +97,13 @@ const Logik = {
    */
   ringFreigeschaltet(ring) {
     if (ring <= 1) return true;
-    return spiel.ringLevel[ring - 2] >= DATA.EBENE.RING_FREI_AB_LEVEL;
+    const davor = ring - 2;
+    // Wer schon aufgestiegen ist, war zwangslaeufig am Maximallevel und damit
+    // weit ueber der Freischaltschwelle. Ohne diese zweite Bedingung wuerde
+    // eine Ascension den naechsten Ring wieder zusperren, weil der Ring davor
+    // auf Level 1 zurueckfaellt.
+    return spiel.ringLevel[davor] >= DATA.EBENE.RING_FREI_AB_LEVEL
+      || spiel.ascensions[davor] > 0;
   },
 
   /** Hoechster freigeschalteter Ring. */
@@ -108,9 +120,60 @@ const Logik = {
    * Zuwachs, den ein Treffer in diesem Ring dem Zaehler punkteProTreffer gibt.
    * Ring 1 = aussen, Ring 10 = Mitte.
    */
-  ringZuwachs(ring, level) {
+  ringZuwachs(ring, level, ascensions) {
     const grund = DATA.RINGE[ring - 1].grundzuwachs;
-    return grund * Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL, level - 1);
+    return grund * Math.pow(this.ringFaktor(ring, ascensions), level - 1);
+  },
+
+  // --- Ascension ----------------------------------------------------------
+
+  /** Wie oft dieser Ring schon aufgestiegen ist. */
+  ringAscensions(ring, ascensions) {
+    return ascensions !== undefined ? ascensions : spiel.ascensions[ring - 1];
+  },
+
+  /** Bis hierher laesst sich der Ring kaufen; danach nur noch aufsteigen. */
+  ringMaxLevel(ring, ascensions) {
+    const a = DATA.ASCENSION;
+    return a.MAX_LEVEL_BASIS + a.MAX_LEVEL_JE_ASCENSION * this.ringAscensions(ring, ascensions);
+  },
+
+  /**
+   * Wirkung eines Levels bei diesem Ring.
+   *
+   * Jede Ascension hebt den Exponenten y und damit den Faktor: aus 1,05 wird
+   * 1,05^1,1 und so fort. Der Zuwachs faellt beim Aufstieg zwar auf den
+   * Grundwert zurueck, wird aber danach schneller wieder aufgebaut.
+   */
+  ringFaktor(ring, ascensions) {
+    const a = DATA.ASCENSION;
+    const y = a.Y_BASIS + a.Y_JE_ASCENSION * this.ringAscensions(ring, ascensions);
+    return Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL, y);
+  },
+
+  /**
+   * Preis des Aufstiegs, bemessen am erreichten Zuwachs.
+   *
+   * Das mittlere Glied ist das Vielfache, auf das der Ring seinen Zuwachs
+   * hochgearbeitet hat. Weil der Ertrag eines Aufstiegs an genau diesem Wert
+   * haengt, kuerzt er sich heraus - uebrig bleibt PREIS_WACHSTUM je Aufstieg
+   * als Bremse. Naeheres in data.js.
+   */
+  ascensionPreis(ring, ascensions) {
+    const a = DATA.ASCENSION;
+    const r = DATA.RINGE[ring - 1];
+    const stufe = this.ringAscensions(ring, ascensions);
+    const erreichterZuwachs = this.ringZuwachs(ring, this.ringMaxLevel(ring, stufe), stufe);
+
+    return a.PREIS_VIELFACHES
+      * r.grundpreis
+      * (erreichterZuwachs / r.grundzuwachs)
+      * Math.pow(a.PREIS_WACHSTUM, stufe);
+  },
+
+  /** Steht der Ring an seinem Maximallevel? */
+  ringAmMaximum(ring) {
+    return spiel.ringLevel[ring - 1] >= this.ringMaxLevel(ring);
   },
 
   // --- Ein Schuss ---------------------------------------------------------
@@ -214,7 +277,7 @@ const Logik = {
     const p = this.ringWahrscheinlichkeiten(this.streuung(stand.zielgenauigkeitLevel));
     let summe = 0;
     for (let i = 0; i < p.length; i++) {
-      summe += p[i] * this.ringZuwachs(i + 1, stand.ringLevel[i]);
+      summe += p[i] * this.ringZuwachs(i + 1, stand.ringLevel[i], stand.ascensions[i]);
     }
     return summe;
   },
@@ -402,7 +465,7 @@ const Upgrades = {
       gruppe: 'zielgenauigkeit',
       name: 'Zielgenauigkeit',
       farbe: null,
-      maxLevel: DATA.ZIELGENAUIGKEIT.MAX_LEVEL,
+      maxLevel: () => DATA.ZIELGENAUIGKEIT.MAX_LEVEL,
       level: () => spiel.zielgenauigkeitLevel,
       kosten: () => Logik.kostenZielgenauigkeit(spiel.zielgenauigkeitLevel),
       wirkung: () => {
@@ -418,7 +481,7 @@ const Upgrades = {
       gruppe: 'schussintervall',
       name: 'Schussintervall',
       farbe: null,
-      maxLevel: DATA.SCHUSSINTERVALL.MAX_LEVEL,
+      maxLevel: () => DATA.SCHUSSINTERVALL.MAX_LEVEL,
       level: () => spiel.schussintervallLevel,
       kosten: () => Logik.kostenSchussintervall(spiel.schussintervallLevel),
       wirkung: () => {
@@ -439,7 +502,7 @@ const Upgrades = {
         gruppe: 'ringe',
         name: 'Ring ' + ring,
         farbe: DATA.RINGE[i].farbe,
-        maxLevel: DATA.RING_UPGRADE.MAX_LEVEL,
+        maxLevel: () => Logik.ringMaxLevel(ring),
         level: () => spiel.ringLevel[i],
         kosten: () => Logik.kostenRing(ring, spiel.ringLevel[i]),
         wirkung: () => '+' + Logik.formatiereZahl(Logik.ringZuwachs(ring, spiel.ringLevel[i]))
@@ -457,7 +520,7 @@ const Upgrades = {
   },
 
   amMaximum(u) {
-    return u.level() >= u.maxLevel;
+    return u.level() >= u.maxLevel();
   },
 
   bezahlbar(u) {
@@ -480,10 +543,16 @@ const Upgrades = {
     spiel.kaufMengeIndex = (spiel.kaufMengeIndex + 1) % DATA.KAUF.MENGEN.length;
   },
 
-  /** Wie viele Level ein Klick auf diese Karte gerade kaufen wuerde. */
+  /**
+   * Wie viele Level ein Klick auf diese Karte gerade kaufen wuerde.
+   *
+   * Auch die festen Mengen werden am Maximallevel abgeschnitten: stehen bei
+   * Maximum 25 noch sieben Level aus, kauft x10 sieben und nicht zehn.
+   */
   anzahlFuer(u) {
     const menge = this.menge();
-    return menge === 'MAX' ? u.maxAnzahl() : menge;
+    if (menge === 'MAX') return u.maxAnzahl();
+    return Math.max(0, Math.min(menge, u.maxLevel() - u.level()));
   },
 
   /** Mehrere Level auf einmal. Reicht das Guthaben nicht, passiert nichts. */
@@ -496,6 +565,30 @@ const Upgrades = {
 
     spiel.punkte -= kosten;
     u.anhebenUm(anzahl);
+    return true;
+  },
+
+  /**
+   * Aufstieg eines Rings.
+   *
+   * Der Ring faellt auf Level 1 und damit auf seinen Grundzuwachs zurueck,
+   * bekommt dafuer ein hoeheres Maximum und einen staerkeren Faktor je Level.
+   * Weil die Preiskurve am Level haengt, beginnt sie damit von selbst wieder
+   * von vorn - ohne das waere der Wiederaufbau unbezahlbar.
+   *
+   * Punkte, Punktestand und alle anderen Ringe bleiben unangetastet, und ein
+   * bereits freigeschalteter Ring bleibt frei: dass Ring 3 auf Level 1
+   * zurueckfaellt, sperrt Ring 4 nicht wieder zu.
+   */
+  ascensionMoeglich(ring) {
+    return Logik.ringAmMaximum(ring) && spiel.punkte >= Logik.ascensionPreis(ring);
+  },
+
+  ascension(ring) {
+    if (!this.ascensionMoeglich(ring)) return false;
+    spiel.punkte -= Logik.ascensionPreis(ring);
+    spiel.ascensions[ring - 1]++;
+    spiel.ringLevel[ring - 1] = 1;
     return true;
   },
 
