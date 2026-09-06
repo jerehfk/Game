@@ -21,6 +21,8 @@ const Zustand = {
        * Fortschritt, waehrend punkte die Waehrung ist, die wieder ausgeht.
        */
       punkteProTreffer: DATA.SCORING.START_PUNKTE_PRO_TREFFER,
+      /** Stellung des Mengenknopfs, Index in DATA.KAUF.MENGEN. */
+      kaufMengeIndex: 0,
       zielgenauigkeitLevel: 1,
       schussintervallLevel: 1,
       ringLevel: new Array(DATA.SCHEIBE.RINGE_GESAMT).fill(1),
@@ -206,6 +208,9 @@ const Speicher = {
         : 1,
       ringLevel: frisch.ringLevel,
       statistik: frisch.statistik,
+      kaufMengeIndex: (Number.isInteger(daten.kaufMengeIndex)
+        && daten.kaufMengeIndex >= 0
+        && daten.kaufMengeIndex < DATA.KAUF.MENGEN.length) ? daten.kaufMengeIndex : 0,
       zuletztGespeichert: zahl(daten.zuletztGespeichert, Date.now())
     };
 

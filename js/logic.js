@@ -62,6 +62,49 @@ const Logik = {
   },
 
   /**
+   * Preis fuer mehrere Level am Stueck - geometrische Summe, nicht
+   * Einzelpreis mal Anzahl: der Preis waechst ja zwischen den Leveln mit.
+   */
+  kostenRingMenge(ring, level, anzahl) {
+    if (anzahl <= 0) return 0;
+    const q = DATA.RINGE[ring - 1].kostenfaktor;
+    return this.kostenRing(ring, level) * (Math.pow(q, anzahl) - 1) / (q - 1);
+  },
+
+  /**
+   * Wie viele Level ein Guthaben in einem Zug hergibt.
+   *
+   * Die Summenformel nach der Anzahl aufgeloest, statt in einer Schleife
+   * hochzuzaehlen - bei billigen Ringen und viel Guthaben waeren das sonst
+   * Zehntausende Durchlaeufe je Frame.
+   */
+  maxKaufbareRingLevel(ring, level, guthaben) {
+    const start = this.kostenRing(ring, level);
+    if (guthaben < start) return 0;
+    const q = DATA.RINGE[ring - 1].kostenfaktor;
+    return Math.floor(Math.log(1 + guthaben * (q - 1) / start) / Math.log(q));
+  },
+
+  /**
+   * Ist die Kaufkarte dieses Rings schon sichtbar?
+   * Ring 1 immer, jeder weitere ab RING_FREI_AB_LEVEL des Rings davor.
+   */
+  ringFreigeschaltet(ring) {
+    if (ring <= 1) return true;
+    return spiel.ringLevel[ring - 2] >= DATA.EBENE.RING_FREI_AB_LEVEL;
+  },
+
+  /** Hoechster freigeschalteter Ring. */
+  hoechsterFreierRing() {
+    let hoechster = 1;
+    for (let ring = 2; ring <= DATA.SCHEIBE.RINGE_GESAMT; ring++) {
+      if (!this.ringFreigeschaltet(ring)) break;
+      hoechster = ring;
+    }
+    return hoechster;
+  },
+
+  /**
    * Zuwachs, den ein Treffer in diesem Ring dem Zaehler punkteProTreffer gibt.
    * Ring 1 = aussen, Ring 10 = Mitte.
    */
@@ -385,7 +428,14 @@ const Upgrades = {
         kosten: () => Logik.kostenRing(ring, spiel.ringLevel[i]),
         wirkung: () => '+' + Logik.formatiereZahl(Logik.ringZuwachs(ring, spiel.ringLevel[i]))
           + ' je Treffer',
-        anheben: () => { spiel.ringLevel[i]++; }
+        anheben: () => { spiel.ringLevel[i]++; },
+
+        // Fuer den Mengenknopf: Preis und Obergrenze mehrerer Level am Stueck.
+        ring,
+        kostenFuer: (anzahl) => Logik.kostenRingMenge(ring, spiel.ringLevel[i], anzahl),
+        maxAnzahl: () => Logik.maxKaufbareRingLevel(ring, spiel.ringLevel[i], spiel.punkte),
+        anhebenUm: (anzahl) => { spiel.ringLevel[i] += anzahl; },
+        frei: () => Logik.ringFreigeschaltet(ring)
       });
     }
   },
@@ -402,6 +452,34 @@ const Upgrades = {
     if (!this.bezahlbar(u)) return false;
     spiel.punkte -= u.kosten();
     u.anheben();
+    return true;
+  },
+
+  /** Die aktuell gewaehlte Kaufmenge, 1 / 10 / 100 oder 'MAX'. */
+  menge() {
+    return DATA.KAUF.MENGEN[spiel.kaufMengeIndex] ?? DATA.KAUF.MENGEN[0];
+  },
+
+  mengeWeiterschalten() {
+    spiel.kaufMengeIndex = (spiel.kaufMengeIndex + 1) % DATA.KAUF.MENGEN.length;
+  },
+
+  /** Wie viele Level ein Klick auf diese Karte gerade kaufen wuerde. */
+  anzahlFuer(u) {
+    const menge = this.menge();
+    return menge === 'MAX' ? u.maxAnzahl() : menge;
+  },
+
+  /** Mehrere Level auf einmal. Reicht das Guthaben nicht, passiert nichts. */
+  kaufenMenge(u) {
+    const anzahl = this.anzahlFuer(u);
+    if (anzahl <= 0) return false;
+
+    const kosten = u.kostenFuer(anzahl);
+    if (spiel.punkte < kosten) return false;
+
+    spiel.punkte -= kosten;
+    u.anhebenUm(anzahl);
     return true;
   },
 

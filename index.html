@@ -8,51 +8,33 @@
 </head>
 <body>
 
-<main id="spiel">
+<!-- Zehn feste Felder, eines je Ring. Die Zeile verschiebt sich nie: ein noch
+     nie getroffener Ring zeigt ein Fragezeichen an derselben Stelle. -->
+<div class="kopf" id="kopf"></div>
 
-  <section id="bereich-scheibe">
-    <header id="anzeige">
-      <div class="wert">
-        <span id="anzeige-punkte" class="zahl">0</span>
-        <span class="einheit">Punkte</span>
-      </div>
-      <div class="wert">
-        <span id="anzeige-ppt" class="zahl mittel">1</span>
-        <span class="einheit">pro Treffer</span>
-      </div>
-      <div class="wert">
-        <span id="anzeige-pps" class="zahl klein">0</span>
-        <span class="einheit">Punkte / s</span>
-      </div>
-    </header>
+<div class="layout">
 
-    <div id="scheibe-rahmen">
-      <canvas id="scheibe"></canvas>
-    </div>
-
-    <div class="gruppe" id="gruppe-ringe">
-      <h2>Ring-Upgrades</h2>
-      <div class="gruppe-inhalt"></div>
-    </div>
-
-    <p id="wand-hinweis" hidden></p>
-
-    <section class="gruppe" id="verteilung-block">
-      <h2 id="verteilung-titel">Trefferverteilung</h2>
-      <div id="verteilung"></div>
-      <div class="stat-zeile"><span>Spielzeit</span><b id="stat-spielzeit">0 s</b></div>
-    </section>
-
-    <div id="speicher-leiste">
+  <aside class="links">
+    <div id="ringUpgrades"></div>
+    <div id="speicherLeiste">
       <button type="button" id="knopf-export">Exportieren</button>
       <button type="button" id="knopf-import">Importieren</button>
       <button type="button" id="knopf-reset" class="gefahr">Zurücksetzen</button>
     </div>
-  </section>
+  </aside>
 
-  <aside id="bereich-statistik">
-    <div class="gruppe" id="gruppe-statistiken">
-      <h2>Statistiken</h2>
+  <main class="mitte">
+    <div class="punkte">
+      <span id="anzeige-punkte">0</span>
+      <small>Punkte</small>
+    </div>
+    <div id="scheibe-rahmen">
+      <canvas id="scheibe"></canvas>
+    </div>
+  </main>
+
+  <aside class="rechts">
+    <div class="karte statistik">
       <div class="stat-zeile"><span>Punkte pro Treffer</span><b id="stat-ppt">1,00</b></div>
       <div class="stat-zeile"><span>Punkte pro Sekunde</span><b id="stat-pps">0,00</b></div>
       <div class="stat-zeile"><span>Schüsse gesamt</span><b id="stat-schuesse">0</b></div>
@@ -60,7 +42,7 @@
     </div>
   </aside>
 
-</main>
+</div>
 
 <!-- Eigenes Overlay statt confirm()/prompt(): Browserdialoge halten die
      Spielschleife an und würden den Fortschritt einfrieren. -->

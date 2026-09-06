@@ -39,7 +39,7 @@ const DATA = {
    * Gezeichnet wird trotzdem gleich breit - siehe SCHEIBE.
    */
   RINGE: [
-    { nummer:  1, name: 'weiss',     farbe: '#fdfdfd', grundpreis: 4,    kostenfaktor: 1.20, grundzuwachs: 0.1,           innen: 0.4129, aussen: 1.0000 },
+    { nummer:  1, name: 'weiss',     farbe: '#dcdcdc', grundpreis: 4,    kostenfaktor: 1.20, grundzuwachs: 0.1,           innen: 0.4129, aussen: 1.0000 },
     { nummer:  2, name: 'magenta',   farbe: '#e04ad0', grundpreis: 1e2,  kostenfaktor: 1.24, grundzuwachs: 0.215443469,   innen: 0.2329, aussen: 0.4129 },
     { nummer:  3, name: 'violett',   farbe: '#9b48ed', grundpreis: 1e3,  kostenfaktor: 1.28, grundzuwachs: 0.464158883,   innen: 0.1167, aussen: 0.2329 },
     { nummer:  4, name: 'blau',      farbe: '#4a7ce8', grundpreis: 1e4,  kostenfaktor: 1.32, grundzuwachs: 1,             innen: 0.0579, aussen: 0.1167 },
@@ -66,7 +66,7 @@ const DATA = {
     RADIUS: 1,
     /** Nur fuer die Darstellung: 1 / 10 Anzeigeradius je Ring. */
     ANZEIGE_RING_BREITE: 0.1,
-    HINTERGRUND: '#16171c',
+    HINTERGRUND: '#2b2b2b',
     /**
      * Sekunden, ueber die ein eingeschlagener Pfeil gleichmaessig auf null
      * verblasst; danach wird er entfernt. Bei vollem Tempo (zehn Schuss pro
@@ -167,7 +167,21 @@ const DATA = {
    * Verschwendung.
    */
   EBENE: {
-    GLOBALE_UPGRADES_FREI: false
+    GLOBALE_UPGRADES_FREI: false,
+    /**
+     * Ein Ring-Upgrade wird sichtbar, sobald der Ring davor dieses Level
+     * erreicht hat. Ring 1 ist von Anfang an offen. Getroffen und gutgeschrieben
+     * wird jeder Ring immer - die Sperre betrifft nur die Kaufkarte.
+     */
+    RING_FREI_AB_LEVEL: 5
+  },
+
+  /**
+   * Kaufmengen des Mengenknopfs, der Reihe nach durchgeschaltet.
+   * MAX kauft so viele Level, wie die Punkte in einem Zug hergeben.
+   */
+  KAUF: {
+    MENGEN: [1, 10, 100, 'MAX']
   },
 
   /**
@@ -243,14 +257,6 @@ const DATA = {
      * reagieren, statt die gesamte Spielzeit zu mitteln.
      */
     VERTEILUNG_FENSTER: 500
-  },
-
-  HINWEIS: {
-    /**
-     * So lange muss durchgehend kein einziges Upgrade bezahlbar sein, bevor
-     * der Hinweis auf das Demo-Ende erscheint.
-     */
-    WAND_SEKUNDEN: 180
   },
 
   /**

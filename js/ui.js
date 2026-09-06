@@ -3,38 +3,189 @@
 /**
  * Oberflaeche.
  *
- * Die Knoten werden einmal beim Start gebaut und danach nur noch mit neuen
- * Werten befuellt - kein innerHTML im Takt der Schleife.
+ * Die Knoten werden gebaut, wenn sich ihre Zahl aendert, und danach nur noch
+ * mit neuen Werten befuellt - kein innerHTML im Takt der Schleife.
  */
 const UI = {
   knoten: {},
-  /** Zeilen der Trefferverteilung, Schluessel 0 = daneben, 1..10 = Ring. */
-  verteilungsZeilen: {},
-  /** Je ein Eintrag pro Upgrade-Knopf, in derselben Reihenfolge wie Upgrades.alle. */
-  upgradeZeilen: [],
+  /** Ein Feld je Ring in der Kopfzeile, Index 0 = Ring 1. */
+  kopfFelder: [],
+  /** Aufgebaute Ring-Karten, Schluessel ist die Ringnummer. */
+  ringZeilen: {},
+  /** Bis zu welchem Ring zuletzt gebaut wurde - erst danach lohnt ein Neubau. */
+  gebautBis: 0,
 
   initialisieren() {
     const k = this.knoten;
+    k.kopf = document.getElementById('kopf');
     k.punkte = document.getElementById('anzeige-punkte');
-    k.ppt = document.getElementById('anzeige-ppt');
-    k.pps = document.getElementById('anzeige-pps');
+    k.liste = document.getElementById('ringUpgrades');
     k.statPpt = document.getElementById('stat-ppt');
     k.statPps = document.getElementById('stat-pps');
     k.schuesse = document.getElementById('stat-schuesse');
     k.quote = document.getElementById('stat-quote');
-    k.spielzeit = document.getElementById('stat-spielzeit');
-    k.verteilung = document.getElementById('verteilung');
-    k.wand = document.getElementById('wand-hinweis');
 
-    // Fenstergroesse steht in data.js, nicht in der Seite - sie gehoert zum
-    // Balancing und soll dort aenderbar bleiben.
-    document.getElementById('verteilung-titel').textContent =
-      'Trefferverteilung (letzte ~' + DATA.STATISTIK.VERTEILUNG_FENSTER + ' Schüsse)';
-
-    this.verteilungBauen();
-    this.upgradesBauen();
+    this.kopfBauen();
+    this.listeBauen();
     this.speicherKnoepfeBinden();
   },
+
+  // --- Kopfzeile ----------------------------------------------------------
+
+  /**
+   * Zehn feste Felder, eines je Ring. Sie werden einmal angelegt und behalten
+   * ihren Platz: ein noch nie getroffener Ring zeigt ein Fragezeichen an
+   * derselben Stelle, damit die Zeile nie springt.
+   */
+  kopfBauen() {
+    for (let ring = 1; ring <= DATA.SCHEIBE.RINGE_GESAMT; ring++) {
+      const feld = document.createElement('span');
+      feld.title = 'Ring ' + ring;
+      this.knoten.kopf.appendChild(feld);
+      this.kopfFelder.push(feld);
+    }
+  },
+
+  kopfAktualisieren() {
+    for (let i = 0; i < this.kopfFelder.length; i++) {
+      const feld = this.kopfFelder[i];
+      // Getroffen heisst gesehen: erst dann verraet die Zeile den Zuwachs.
+      //
+      // Verglichen wird gegen einen ganzen Treffer, nicht gegen null. Die
+      // Erwartungswert-Buchung fuer Offline-Zeit schreibt jedem Ring
+      // Bruchteile gut - gegen null geprueft waeren nach dem ersten
+      // Nachrechnen schlagartig alle zehn Felder aufgedeckt.
+      const getroffen = spiel.statistik.ringTreffer[i] >= 1;
+
+      if (!getroffen) {
+        if (feld.textContent !== '?') {
+          feld.textContent = '?';
+          feld.className = 'unbekannt';
+          feld.style.color = '';
+        }
+        continue;
+      }
+
+      const text = '+' + Logik.formatiereZahl(Logik.ringZuwachs(i + 1, spiel.ringLevel[i]));
+      if (feld.textContent !== text) feld.textContent = text;
+      if (feld.className !== '') {
+        feld.className = '';
+        feld.style.color = DATA.RINGE[i].farbe;
+      }
+    }
+  },
+
+  // --- Linke Spalte: Ring-Karten ------------------------------------------
+
+  /**
+   * Sichtbar sind alle freigeschalteten Ringe von 1 nach 10, dazu der
+   * naechste als nicht anklickbare Vorschau. Neu gebaut wird nur, wenn ein
+   * Ring dazukommt.
+   */
+  listeBauen() {
+    const hoechster = Logik.hoechsterFreierRing();
+    if (hoechster === this.gebautBis) return;
+
+    this.gebautBis = hoechster;
+    this.ringZeilen = {};
+    this.knoten.liste.textContent = '';
+
+    for (let ring = 1; ring <= hoechster; ring++) {
+      const karte = this.ringKarteBauen(ring);
+      if (ring === 1) {
+        // Der Mengenknopf steht neben Ring 1, nicht darin: sonst bricht deren
+        // Text um und die Karte wird hoeher als alle anderen.
+        const zeile = document.createElement('div');
+        zeile.className = 'ersteZeile';
+
+        const menge = document.createElement('button');
+        menge.type = 'button';
+        menge.id = 'menge';
+        menge.addEventListener('click', () => {
+          Upgrades.mengeWeiterschalten();
+          this.aktualisieren();
+        });
+        this.knoten.menge = menge;
+
+        zeile.append(karte, menge);
+        this.knoten.liste.appendChild(zeile);
+      } else {
+        this.knoten.liste.appendChild(karte);
+      }
+    }
+
+    if (hoechster < DATA.SCHEIBE.RINGE_GESAMT) {
+      this.knoten.liste.appendChild(this.vorschauBauen(hoechster + 1));
+    }
+  },
+
+  ringKarteBauen(ring) {
+    const u = Upgrades.alle.find((e) => e.ring === ring);
+
+    const karte = document.createElement('button');
+    karte.type = 'button';
+    karte.className = 'ring';
+    karte.style.setProperty('--ringfarbe', DATA.RINGE[ring - 1].farbe);
+
+    const oben = document.createElement('span');
+    oben.className = 'oben';
+    const unten = document.createElement('span');
+    unten.className = 'unten';
+    karte.append(oben, unten);
+
+    karte.addEventListener('click', () => {
+      if (Upgrades.kaufenMenge(u)) this.aktualisieren();
+    });
+
+    this.ringZeilen[ring] = { u, karte, oben, unten };
+    return karte;
+  },
+
+  /** Der naechste, noch gesperrte Ring - gestrichelt und ohne Funktion. */
+  vorschauBauen(ring) {
+    const karte = document.createElement('div');
+    karte.className = 'ring vorschau';
+
+    const oben = document.createElement('span');
+    oben.className = 'oben';
+    oben.textContent = 'Ring ' + ring;
+
+    const unten = document.createElement('span');
+    unten.className = 'unten';
+    unten.textContent = 'ab Level ' + DATA.EBENE.RING_FREI_AB_LEVEL + ' von Ring ' + (ring - 1);
+
+    karte.append(oben, unten);
+    return karte;
+  },
+
+  ringeAktualisieren() {
+    this.listeBauen();
+
+    const menge = Upgrades.menge();
+    if (this.knoten.menge) {
+      this.knoten.menge.textContent = menge === 'MAX' ? 'MAX' : '×' + menge;
+    }
+
+    for (const schluessel in this.ringZeilen) {
+      const z = this.ringZeilen[schluessel];
+      const ring = z.u.ring;
+      const level = z.u.level();
+
+      z.oben.textContent = 'Ring ' + ring + ' · Lvl ' + level;
+
+      const anzahl = Upgrades.anzahlFuer(z.u);
+      const kosten = z.u.kostenFuer(Math.max(1, anzahl));
+      z.unten.textContent = '+' + Logik.formatiereZahl(Logik.ringZuwachs(ring, level))
+        + ' je Treffer · ' + Logik.formatiereZahl(kosten);
+
+      // Arm heisst: die gewaehlte Menge ist gerade nicht zu bezahlen.
+      const bezahlbar = anzahl > 0 && spiel.punkte >= kosten;
+      z.karte.classList.toggle('arm', !bezahlbar);
+      z.karte.disabled = !bezahlbar;
+    }
+  },
+
+  // --- Speicherstand ------------------------------------------------------
 
   speicherKnoepfeBinden() {
     document.getElementById('knopf-export').addEventListener('click', () => {
@@ -77,7 +228,7 @@ const UI = {
         titel: 'Wirklich zurücksetzen?',
         text: [
           'Punkte, alle Level und die Statistik gehen verloren.',
-          'Es gibt in dieser Demo noch keinen Reset-Layer - zurückgesetzt wird bei null, ohne Gegenleistung.'
+          'Es gibt in dieser Fassung noch kein Prestige - zurückgesetzt wird bei null, ohne Gegenleistung.'
         ],
         knoepfe: [
           { beschriftung: 'Abbrechen' },
@@ -95,177 +246,34 @@ const UI = {
     });
   },
 
-  /** Fuer jedes Upgrade eine Zeile in der passenden Gruppe. */
-  upgradesBauen() {
-    // In der ersten Ebene liefert Upgrades.alle nur Ring-Upgrades; die
-    // Zuordnung bleibt trotzdem allgemein, damit die gesperrten Achsen nach
-    // dem Prestige ohne Umbau wieder eine Gruppe finden.
-    const gruppen = {
-      zielgenauigkeit: document.querySelector('#gruppe-zielgenauigkeit .gruppe-inhalt'),
-      schussintervall: document.querySelector('#gruppe-schussintervall .gruppe-inhalt'),
-      ringe: document.querySelector('#gruppe-ringe .gruppe-inhalt')
-    };
-
-    for (const u of Upgrades.alle) {
-      if (!gruppen[u.gruppe]) continue;
-      const knopf = document.createElement('button');
-      knopf.type = 'button';
-      knopf.className = 'upgrade';
-
-      const tupfer = document.createElement('span');
-      tupfer.className = 'tupfer';
-      if (u.farbe) tupfer.style.background = u.farbe;
-
-      const titel = document.createElement('span');
-      titel.className = 'titel';
-      titel.appendChild(document.createTextNode(u.name));
-      const wirkung = document.createElement('small');
-      titel.appendChild(wirkung);
-
-      const preis = document.createElement('span');
-      preis.className = 'preis';
-      const preisWert = document.createElement('span');
-      const preisNotiz = document.createElement('small');
-      preis.append(preisWert, preisNotiz);
-
-      knopf.append(tupfer, titel, preis);
-      knopf.addEventListener('click', () => {
-        if (Upgrades.kaufen(u)) this.aktualisieren();
-      });
-
-      gruppen[u.gruppe].appendChild(knopf);
-      this.upgradeZeilen.push({ u, knopf, wirkung, preisWert, preisNotiz });
-    }
-  },
-
-  upgradesAktualisieren() {
-    for (const z of this.upgradeZeilen) {
-      const u = z.u;
-      const amMaximum = Upgrades.amMaximum(u);
-
-      z.wirkung.textContent = 'Level ' + u.level() + ' · ' + u.wirkung();
-      z.knopf.classList.toggle('maximal', amMaximum);
-
-      if (amMaximum) {
-        z.preisWert.textContent = 'maximal';
-        z.preisNotiz.textContent = '';
-        z.knopf.disabled = true;
-        continue;
-      }
-
-      const kosten = u.kosten();
-      const fehlt = kosten - spiel.punkte;
-      z.preisWert.textContent = Logik.formatiereZahl(kosten);
-      // Statt nur auszugrauen die Wartezeit nennen: erst damit ist zu sehen,
-      // ob sich Sparen lohnt oder ob dieser Kauf ausser Reichweite ist.
-      z.preisNotiz.textContent = fehlt <= 0
-        ? 'Punkte'
-        : 'in ' + Logik.formatiereDauer(Logik.wartezeit(spiel, fehlt));
-      z.knopf.disabled = fehlt > 0;
-    }
-  },
-
-  /**
-   * Hinweis auf das Demo-Ende, sobald laengere Zeit gar nichts mehr
-   * bezahlbar war.
-   */
-  wandAktualisieren() {
-    const zeigen = Spiel.wandKonto >= DATA.HINWEIS.WAND_SEKUNDEN;
-    this.knoten.wand.hidden = !zeigen;
-    if (!zeigen) return;
-
-    const fehlt = Upgrades.guenstigste() - spiel.punkte;
-    const warten = Logik.formatiereDauer(Logik.wartezeit(spiel, fehlt));
-    this.knoten.wand.textContent =
-      'Hier endet die Demo. Das nächste Upgrade ist erst in ' + warten +
-      ' bezahlbar - ab hier hilft kein Weiterschiessen mehr, sondern der ' +
-      'Reset-Layer, der noch nicht Teil dieser Fassung ist.';
-  },
-
-  /** Eine Zeile je Ring, von der Mitte nach aussen, plus die Fehlschuesse. */
-  verteilungBauen() {
-    const eintraege = [];
-    for (let ring = DATA.SCHEIBE.RINGE_GESAMT; ring >= 1; ring--) {
-      eintraege.push({ ring, beschriftung: 'Ring ' + ring, farbe: DATA.RINGE[ring - 1].farbe });
-    }
-    eintraege.push({ ring: 0, beschriftung: 'daneben', farbe: '#4b5060' });
-
-    for (const e of eintraege) {
-      const zeile = document.createElement('div');
-      zeile.className = 'verteilung-zeile';
-
-      const name = document.createElement('span');
-      name.textContent = e.beschriftung;
-
-      const balken = document.createElement('div');
-      balken.className = 'verteilung-balken';
-      const fuellung = document.createElement('i');
-      fuellung.style.background = e.farbe;
-      balken.appendChild(fuellung);
-
-      const prozent = document.createElement('span');
-      prozent.className = 'prozent';
-      prozent.textContent = '–';
-
-      zeile.append(name, balken, prozent);
-      this.knoten.verteilung.appendChild(zeile);
-      this.verteilungsZeilen[e.ring] = { fuellung, prozent };
-    }
-  },
+  // --- Gesamtbild ---------------------------------------------------------
 
   aktualisieren() {
     const k = this.knoten;
     const st = spiel.statistik;
 
-    const proTreffer = Logik.formatiereZahl(spiel.punkteProTreffer);
-    const proSekunde = Logik.formatiereZahl(Logik.punkteProSekunde(spiel));
-
     k.punkte.textContent = Logik.formatiereZahl(spiel.punkte);
-    k.ppt.textContent = proTreffer;
-    k.pps.textContent = proSekunde;
+    k.statPpt.textContent = Logik.formatiereZahl(spiel.punkteProTreffer);
+    k.statPps.textContent = Logik.formatiereZahl(Logik.punkteProSekunde(spiel));
 
-    k.statPpt.textContent = proTreffer;
-    k.statPps.textContent = proSekunde;
     // Schuesse sind gezaehlte Ereignisse, keine Groesse: bei ihnen waeren die
     // zwei Nachkommastellen der kleinen Zahlen ("5,00") schlicht falsch.
     k.schuesse.textContent = Logik.gruppiere(Math.floor(st.schuesse));
     k.quote.textContent = st.schuesse > 0
       ? (100 * st.treffer / st.schuesse).toFixed(1).replace('.', DATA.FORMAT.DEZIMAL_TRENNER) + ' %'
       : '–';
-    k.spielzeit.textContent = Logik.formatiereDauer(st.spielzeit);
 
-    this.upgradesAktualisieren();
-    this.wandAktualisieren();
-    this.verteilungAktualisieren();
+    this.kopfAktualisieren();
+    this.ringeAktualisieren();
   },
 
-  verteilungAktualisieren() {
-    // Die Balken werden auf den groessten Anteil normiert. Absolut skaliert
-    // waeren sie frueh im Spiel, wo sich die Treffer auf zehn Ringe verteilen,
-    // durchweg zu kurz, um Unterschiede zu zeigen.
-    let groesster = 0;
-    for (let ring = 0; ring <= DATA.SCHEIBE.RINGE_GESAMT; ring++) {
-      groesster = Math.max(groesster, Verteilung.anteil(ring));
-    }
-
-    for (const schluessel in this.verteilungsZeilen) {
-      const ring = Number(schluessel);
-      const anteil = Verteilung.anteil(ring);
-      const zeile = this.verteilungsZeilen[ring];
-      zeile.fuellung.style.width = groesster > 0 ? (100 * anteil / groesster) + '%' : '0%';
-      zeile.prozent.textContent = Verteilung.gewicht > 0
-        ? (100 * anteil).toFixed(anteil >= 0.1 ? 0 : 1).replace('.', DATA.FORMAT.DEZIMAL_TRENNER) + ' %'
-        : '–';
-    }
+  /** Nach Laden, Import oder Zuruecksetzen muss die Kartenliste neu entstehen. */
+  neuAufbauen() {
+    this.gebautBis = 0;
+    this.aktualisieren();
   }
 };
 
-/**
- * Overlay fuer Rueckfragen und Textfelder.
- *
- * Bewusst kein confirm()/prompt(): Browserdialoge halten den ganzen Tab an,
- * die Spielschleife stuende still, solange der Dialog offen ist.
- */
 const Overlay = {
   knoten: {},
 

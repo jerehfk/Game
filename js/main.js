@@ -13,12 +13,6 @@ const Spiel = {
   /** Aufgelaufene Zeit, aus der einzelne Schuesse werden. */
   schussKonto: 0,
   speicherKonto: 0,
-  /**
-   * Wie lange ununterbrochen kein einziges Upgrade bezahlbar war. Daraus
-   * entsteht der Hinweis, dass die Demo hier endet - der Reset, der diese
-   * Wand spaeter aufloest, ist noch nicht Teil des Spiels.
-   */
-  wandKonto: 0,
 
   starten() {
     Upgrades.aufbauen();
@@ -29,7 +23,7 @@ const Spiel = {
     const abwesend = Speicher.laden();
     this.verteilungAufsetzen();
     if (abwesend !== null) this.offlineGutschreiben(abwesend);
-    UI.aktualisieren();
+    UI.neuAufbauen();
 
     window.addEventListener('beforeunload', () => Speicher.speichern());
     // Auf Mobilgeraeten wird beforeunload haeufig nicht mehr ausgeloest;
@@ -51,7 +45,7 @@ const Spiel = {
     Scheibe.pfeileLeeren();
     this.schussKonto = 0;
     this.verteilungAufsetzen();
-    UI.aktualisieren();
+    UI.neuAufbauen();
   },
 
   /**
@@ -123,8 +117,6 @@ const Spiel = {
   rechnen(delta) {
     if (delta <= 0) return;
     spiel.statistik.spielzeit += delta;
-
-    this.wandKonto = spiel.punkte >= Upgrades.guenstigste() ? 0 : this.wandKonto + delta;
 
     const intervall = Logik.schussintervall(spiel.schussintervallLevel);
     const streuung = Logik.streuung(spiel.zielgenauigkeitLevel);

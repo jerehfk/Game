@@ -1,17 +1,18 @@
-/* Zielscheibe – Oberfläche. Dunkles Grundthema, damit die Ringfarben tragen. */
+/* Zielscheibe – Oberfläche.
+
+   Drei Spalten: links die Ring-Upgrades, mittig Punktestand und Scheibe,
+   rechts die Statistiken. Die mittlere Spalte nimmt den Rest, damit die
+   Scheibe tatsächlich zwischen den Seitenspalten steht und nicht am Rand. */
 
 :root {
-  --hintergrund: #101116;
-  --flaeche: #1a1c23;
-  --flaeche-hell: #23262f;
-  --rand: #2f333e;
-  --text: #e7e9ef;
-  --text-leise: #9aa0b0;
-  --akzent: #6bf57e;
-  --gold: #fda54c;
+  --grund: #2b2b2b;
+  --karte: #383838;
+  --line: #4a4a4a;
+  --text: #f0f0f0;
+  --leise: #9a9a9a;
+  --unbekannt: #4e4e4e;
   --gefahr: #ff6b6b;
-  --scheibe-hintergrund: #16171c;
-  --radius: 10px;
+  --mono: Consolas, "SF Mono", ui-monospace, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -19,204 +20,148 @@
 html, body {
   margin: 0;
   min-height: 100%;
-  background: var(--hintergrund);
+  background: var(--grund);
   color: var(--text);
-  font: 15px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+  font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
-h2 {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--text-leise);
-}
+/* --- Kopfzeile: der Zuwachs je Ring --------------------------------------- */
 
-h3 {
-  margin: 16px 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-leise);
-}
-
-/* Links Scheibe und die zehn Ring-Upgrades, rechts nur die Statistiken.
-   Die rechte Spalte ist schmal und bleibt beim Scrollen stehen - sie hat
-   wenig Inhalt, soll aber neben der langen linken Spalte lesbar bleiben. */
-#spiel {
-  display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(240px, 300px);
-  gap: 22px;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 22px;
-  align-items: start;
-}
-
-#bereich-statistik { position: sticky; top: 22px; }
-#gruppe-statistiken .stat-zeile { padding: 5px 0; font-size: 13px; }
-#gruppe-statistiken .stat-zeile b {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 13px;
-}
-
-#gruppe-ringe { margin-top: 18px; }
-#verteilung-block .stat-zeile { margin-top: 10px; }
-
-/* --- Linke Spalte: Scheibe ---------------------------------------------- */
-
-/* Drei Werte nebeneinander: Währung, Fortschritt, Orientierung.
-   Sie umbrechen einzeln, statt gemeinsam zu schrumpfen - bei 10^20 wird
-   die Zeile sonst schmaler als ihre Zahlen. */
-#anzeige {
+.kopf {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px 24px;
-  margin-bottom: 14px;
-}
-
-.wert { display: flex; align-items: baseline; gap: 8px; }
-
-.zahl {
-  font-size: 32px;
+  justify-content: space-between;
+  padding: 13px 26px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 17px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
 }
-.zahl.mittel { font-size: 26px; color: var(--gold); }
-.zahl.klein { font-size: 18px; color: var(--akzent); }
+.kopf span { flex: 1; text-align: center; }
+.kopf span.unbekannt { color: var(--unbekannt); }
 
-.einheit { font-size: 12px; color: var(--text-leise); }
+/* --- Grundraster ---------------------------------------------------------- */
 
-#scheibe-rahmen {
-  max-width: 560px;
-  background: var(--scheibe-hintergrund);
-  border: 1px solid var(--rand);
-  border-radius: var(--radius);
-  padding: 10px;
-  line-height: 0;
+.layout {
+  display: grid;
+  grid-template-columns: 310px 1fr 260px;   /* links: 250 px Karte + 54 px Knopf */
+  gap: 18px;
+  padding: 18px;
+  align-items: start;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
+/* --- Linke Spalte: Ring-Upgrades ------------------------------------------ */
+
+/* Der Mengenknopf steht neben der Ring-1-Karte, nicht darin: sonst bricht
+   deren Text um und die Karte wird höher als alle anderen. */
+.ersteZeile { display: flex; gap: 6px; align-items: stretch; margin-bottom: 6px; }
+.ersteZeile .ring { margin-bottom: 0; flex: 0 0 250px; }
+
+#menge {
+  flex: 0 0 54px;
+  align-self: stretch;
+  background: var(--karte);
+  border: 1px solid #fff;
+  color: #fff;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+#menge:hover { background: #454545; }
+
+.ring {
+  display: block;
+  width: 250px;
+  text-align: left;
+  border-radius: 7px;
+  padding: 8px 11px;
+  margin-bottom: 6px;
+  border: 1px solid rgba(255, 255, 255, .15);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  /* Ringfarbe gedämpft, damit weißer Text lesbar bleibt. */
+  background: #2f2f2f;
+  background: color-mix(in srgb, var(--ringfarbe) 22%, #2f2f2f);
+}
+.ring:hover:not(:disabled) { border-color: rgba(255, 255, 255, .45); }
+.ring.arm { opacity: .4; cursor: not-allowed; }
+
+.ring .oben { display: block; font-weight: 600; }
+.ring .unten {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: rgba(255, 255, 255, .78);
+}
+
+/* Vorschau auf den nächsten Ring: sichtbar, aber nicht anklickbar. */
+.ring.vorschau {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--leise);
+  cursor: default;
+}
+.ring.vorschau .unten { color: var(--leise); }
+
+#speicherLeiste { display: flex; gap: 6px; margin-top: 14px; }
+#speicherLeiste button {
+  flex: 1;
+  padding: 6px 4px;
+  background: var(--karte);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--leise);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+#speicherLeiste button:hover { color: var(--text); border-color: var(--leise); }
+#speicherLeiste button.gefahr:hover { color: var(--gefahr); border-color: var(--gefahr); }
+
+/* --- Mitte: Punktestand und Scheibe --------------------------------------- */
+
+.mitte { display: flex; flex-direction: column; align-items: center; }
+
+.punkte { text-align: center; margin-bottom: 14px; }
+.punkte span {
+  display: block;
+  font-family: var(--mono);
+  font-size: 34px;
+  font-weight: 600;
+}
+.punkte small { color: var(--leise); font-size: 12px; }
+
+#scheibe-rahmen { width: 100%; max-width: 420px; line-height: 0; }
 #scheibe { width: 100%; height: auto; display: block; }
 
-/* --- Statistik und Trefferverteilung ------------------------------------- */
+/* --- Rechte Spalte: Statistiken ------------------------------------------- */
+
+.karte {
+  background: var(--karte);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 12px 14px;
+}
 
 .stat-zeile {
   display: flex;
   justify-content: space-between;
-  padding: 3px 0;
-  font-size: 13px;
-  color: var(--text-leise);
-}
-.stat-zeile b { color: var(--text); font-variant-numeric: tabular-nums; }
-
-.verteilung-zeile {
-  display: grid;
-  grid-template-columns: 46px 1fr 52px;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 0;
-  font-size: 12px;
-  color: var(--text-leise);
-}
-.verteilung-balken {
-  height: 7px;
-  border-radius: 4px;
-  background: var(--flaeche-hell);
-  overflow: hidden;
-}
-.verteilung-balken > i {
-  display: block;
-  height: 100%;
-  width: 0;
-  border-radius: 4px;
-}
-.verteilung-zeile > .prozent {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- Karten und Upgrade-Zeilen ------------------------------------------- */
-
-.gruppe {
-  background: var(--flaeche);
-  border: 1px solid var(--rand);
-  border-radius: var(--radius);
-  padding: 14px 16px 16px;
-  margin-bottom: 16px;
-}
-
-.upgrade {
-  display: grid;
-  grid-template-columns: 10px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin-bottom: 6px;
-  padding: 9px 12px;
-  background: var(--flaeche-hell);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.12s, opacity 0.12s;
-}
-.upgrade:last-child { margin-bottom: 0; }
-.upgrade:hover:not(:disabled) { border-color: var(--akzent); }
-.upgrade:disabled { opacity: 0.42; cursor: not-allowed; }
-
-.upgrade .tupfer {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--rand);
-}
-.upgrade .titel { font-size: 13px; }
-.upgrade .titel small {
-  display: block;
-  color: var(--text-leise);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-.upgrade .preis {
-  text-align: right;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.upgrade .preis small { display: block; color: var(--text-leise); font-size: 11px; }
-.upgrade.maximal .preis { color: var(--akzent); }
-
-#wand-hinweis {
-  margin: 0 0 16px;
-  padding: 12px 14px;
-  background: #1d1a12;
-  border: 1px solid #4a3f1d;
-  border-radius: var(--radius);
-  color: #e8d9a6;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 0;
+  color: var(--leise);
   font-size: 13px;
 }
-#wand-hinweis[hidden] { display: none; }
-
-#speicher-leiste { display: flex; gap: 8px; }
-
-button {
-  padding: 8px 12px;
-  background: var(--flaeche-hell);
-  border: 1px solid var(--rand);
-  border-radius: 8px;
+.stat-zeile b {
   color: var(--text);
-  font: inherit;
+  font-family: var(--mono);
   font-size: 13px;
-  cursor: pointer;
+  font-weight: 600;
 }
-button:hover { border-color: var(--text-leise); }
-button.gefahr { color: var(--gefahr); }
-button.gefahr:hover { border-color: var(--gefahr); }
 
 /* --- Overlay -------------------------------------------------------------- */
 
@@ -227,53 +172,60 @@ button.gefahr:hover { border-color: var(--gefahr); }
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(8, 9, 12, 0.78);
+  background: rgba(15, 15, 15, .8);
   z-index: 10;
 }
 #overlay[hidden] { display: none; }
 
 #overlay-fenster {
   width: min(520px, 100%);
-  background: var(--flaeche);
-  border: 1px solid var(--rand);
-  border-radius: 12px;
-  padding: 20px 22px;
+  background: var(--karte);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px 20px;
 }
-#overlay-fenster h2 {
-  color: var(--text);
-  font-size: 15px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-#overlay-text { font-size: 14px; color: var(--text-leise); }
-#overlay-text b { color: var(--text); }
+#overlay-fenster h2 { margin: 0 0 10px; font-size: 15px; }
+#overlay-text { font-size: 14px; color: var(--leise); }
 
 #overlay-eingabe {
   width: 100%;
   height: 130px;
   margin-top: 12px;
   padding: 10px;
-  background: var(--hintergrund);
-  border: 1px solid var(--rand);
-  border-radius: 8px;
+  background: var(--grund);
+  border: 1px solid var(--line);
+  border-radius: 6px;
   color: var(--text);
-  font: 12px/1.4 ui-monospace, Consolas, monospace;
+  font: 12px/1.4 var(--mono);
   resize: vertical;
 }
 #overlay-eingabe[hidden] { display: none; }
 
-#overlay-knoepfe {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+#overlay-knoepfe { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+#overlay-knoepfe button {
+  padding: 7px 12px;
+  background: var(--grund);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
 }
+#overlay-knoepfe button:hover { border-color: var(--leise); }
+#overlay-knoepfe button.gefahr { color: var(--gefahr); }
 
 /* --- Schmale Bildschirme -------------------------------------------------- */
 
-@media (max-width: 860px) {
-  #spiel { grid-template-columns: 1fr; padding: 14px; }
-  #bereich-statistik { position: static; }
-  .zahl { font-size: 26px; }
-  .zahl.mittel { font-size: 22px; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .mitte  { order: -1; }   /* auf schmalen Schirmen zuerst die Scheibe */
+  .links, .rechts { justify-self: center; width: 100%; max-width: 420px; }
+  .kopf { padding: 10px 8px; font-size: 13px; }
+}
+
+/* Zehn Felder nebeneinander brauchen Platz: auf sehr schmalen Schirmen wird
+   die Kopfzeile kleiner, statt dass die Werte aneinanderstossen. */
+@media (max-width: 560px) {
+  .kopf { padding: 8px 4px; font-size: 10px; }
 }
