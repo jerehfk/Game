@@ -19,12 +19,16 @@ const DATA = {
    *               gibt.
    * innen/aussen  Echte Ringgrenzen auf einer Scheibe mit Radius 1.
    *
-   * Zum grundzuwachs: er ist die Quadratwurzel des Grundpreises - bei Ring 10
-   * die 2,8-te Wurzel, weil dessen Preis mit 10^27 aus der Reihe faellt (sonst
-   * drei Zehnerpotenzen Abstand, hier neun) und die Quadratwurzel ihn alles
-   * andere ueberstrahlen liesse. Die Werte stehen bewusst als feste Tabelle
-   * und werden nicht zur Laufzeit gewurzelt: die Wurzelregel ist die
-   * Herleitung, nicht die Mechanik.
+   * Zum grundzuwachs: eine eigene geometrische Reihe von 0,1 auf 100, Faktor
+   * 2,15443469 je Ring. Sie ist bewusst von den Preisen entkoppelt - solange
+   * sie sich aus ihnen ableitete, sprang der Zaehler bei einem einzigen
+   * Gluecksteffer auf einen inneren Ring in Groessenordnungen, gegen die der
+   * ganze restliche Durchgang nicht mehr ankam.
+   *
+   * Flach gestaffelt tragen alle zehn Ringe zum Fortschritt bei: rund 23 / 23 /
+   * 22 / 13 / 6 / 4 / 2,6 / 2,3 / 2 / 2 Prozent. Die aeusseren dominieren am
+   * Anfang leicht, weil man sie viel haeufiger trifft; mit steigender
+   * Zielgenauigkeit verschiebt sich das nach innen - das ist die Progression.
    *
    * Zu innen/aussen: die Ringe sind absichtlich unterschiedlich breit. Bei
    * einer um die Mitte streuenden Verteilung landen die meisten Pfeile innen -
@@ -35,16 +39,16 @@ const DATA = {
    * Gezeichnet wird trotzdem gleich breit - siehe SCHEIBE.
    */
   RINGE: [
-    { nummer:  1, name: 'weiss',     farbe: '#fdfdfd', grundpreis: 4,    kostenfaktor: 1.20, grundzuwachs: 2,              innen: 0.4129, aussen: 1.0000 },
-    { nummer:  2, name: 'magenta',   farbe: '#e04ad0', grundpreis: 1e2,  kostenfaktor: 1.24, grundzuwachs: 10,             innen: 0.2329, aussen: 0.4129 },
-    { nummer:  3, name: 'violett',   farbe: '#9b48ed', grundpreis: 1e3,  kostenfaktor: 1.28, grundzuwachs: 31.6227766,     innen: 0.1167, aussen: 0.2329 },
-    { nummer:  4, name: 'blau',      farbe: '#4a7ce8', grundpreis: 1e4,  kostenfaktor: 1.32, grundzuwachs: 100,            innen: 0.0579, aussen: 0.1167 },
-    { nummer:  5, name: 'cyan',      farbe: '#4bfefe', grundpreis: 1e6,  kostenfaktor: 1.36, grundzuwachs: 1000,           innen: 0.0317, aussen: 0.0579 },
-    { nummer:  6, name: 'tuerkis',   farbe: '#4af8dd', grundpreis: 1e9,  kostenfaktor: 1.40, grundzuwachs: 31622.7766,     innen: 0.0183, aussen: 0.0317 },
-    { nummer:  7, name: 'gruen',     farbe: '#6bf57e', grundpreis: 1e12, kostenfaktor: 1.44, grundzuwachs: 1e6,            innen: 0.0116, aussen: 0.0183 },
-    { nummer:  8, name: 'gelbgruen', farbe: '#a4f248', grundpreis: 1e15, kostenfaktor: 1.48, grundzuwachs: 3.16227766e7,   innen: 0.0071, aussen: 0.0116 },
-    { nummer:  9, name: 'orange',    farbe: '#fda54c', grundpreis: 1e18, kostenfaktor: 1.52, grundzuwachs: 1e9,            innen: 0.0041, aussen: 0.0071 },
-    { nummer: 10, name: 'rot',       farbe: '#ff5959', grundpreis: 1e27, kostenfaktor: 1.56, grundzuwachs: 4.3939706e9,    innen: 0.0000, aussen: 0.0041 }
+    { nummer:  1, name: 'weiss',     farbe: '#fdfdfd', grundpreis: 4,    kostenfaktor: 1.20, grundzuwachs: 0.1,           innen: 0.4129, aussen: 1.0000 },
+    { nummer:  2, name: 'magenta',   farbe: '#e04ad0', grundpreis: 1e2,  kostenfaktor: 1.24, grundzuwachs: 0.215443469,   innen: 0.2329, aussen: 0.4129 },
+    { nummer:  3, name: 'violett',   farbe: '#9b48ed', grundpreis: 1e3,  kostenfaktor: 1.28, grundzuwachs: 0.464158883,   innen: 0.1167, aussen: 0.2329 },
+    { nummer:  4, name: 'blau',      farbe: '#4a7ce8', grundpreis: 1e4,  kostenfaktor: 1.32, grundzuwachs: 1,             innen: 0.0579, aussen: 0.1167 },
+    { nummer:  5, name: 'cyan',      farbe: '#4bfefe', grundpreis: 1e6,  kostenfaktor: 1.36, grundzuwachs: 2.15443469,    innen: 0.0317, aussen: 0.0579 },
+    { nummer:  6, name: 'tuerkis',   farbe: '#4af8dd', grundpreis: 1e9,  kostenfaktor: 1.40, grundzuwachs: 4.641588834,   innen: 0.0183, aussen: 0.0317 },
+    { nummer:  7, name: 'gruen',     farbe: '#6bf57e', grundpreis: 1e12, kostenfaktor: 1.44, grundzuwachs: 10,            innen: 0.0116, aussen: 0.0183 },
+    { nummer:  8, name: 'gelbgruen', farbe: '#a4f248', grundpreis: 1e15, kostenfaktor: 1.48, grundzuwachs: 21.5443469,    innen: 0.0071, aussen: 0.0116 },
+    { nummer:  9, name: 'orange',    farbe: '#fda54c', grundpreis: 1e18, kostenfaktor: 1.52, grundzuwachs: 46.41588834,   innen: 0.0041, aussen: 0.0071 },
+    { nummer: 10, name: 'rot',       farbe: '#ff5959', grundpreis: 1e27, kostenfaktor: 1.56, grundzuwachs: 100,           innen: 0.0000, aussen: 0.0041 }
   ],
 
   /**
@@ -136,13 +140,14 @@ const DATA = {
    * Ring hat seinen eigenen Kostenfaktor, weil ein gemeinsamer die Staffelung
    * der Grundpreise ueber viele Level wieder einebnen wuerde.
    *
-   * Jeder Kostenfaktor liegt deutlich ueber der Wirkung von 1,05, sodass jeder
-   * Ring saettigt. Der Abstand muss groesser sein als bei einer einmaligen
-   * Gutschrift, weil das Scoring rueckgekoppelt ist: Punkte kaufen Upgrades,
-   * die den Zaehler schneller wachsen lassen, was wieder mehr Punkte gibt.
+   * Die Wirkung von 1,001 je Level ist winzig und liegt weit unter jedem
+   * Kostenfaktor, sodass jeder Ring rasch saettigt. Das ist der Sinn der
+   * Sache: das Scoring ist rueckgekoppelt - Punkte kaufen Upgrades, die den
+   * Zaehler schneller wachsen lassen, was wieder mehr Punkte gibt -, und diese
+   * Schleife soll das Spiel nicht in Minuten davontragen.
    */
   RING_UPGRADE: {
-    FAKTOR_PRO_LEVEL: 1.05,
+    FAKTOR_PRO_LEVEL: 1.001,
     MAX_LEVEL: Infinity
   },
 
@@ -230,15 +235,27 @@ const DATA = {
   },
 
   /**
-   * Zahlwoerter fuer grosse Betraege; ab 10^12 wird auf 1,23e12 umgestellt.
+   * Zahlendarstellung, durchgehend deutsch: Punkt als Tausendertrenner, Komma
+   * als Dezimaltrenner.
    *
-   * Die Reihe endet bewusst bei den Milliarden. Beide Kernzahlen wachsen weit
-   * darueber hinaus, und erfundene Kuerzel wie Qa oder Sx sagen bei 10^20
-   * niemandem mehr etwas - die Exponentialschreibweise ist dort schlicht
-   * lesbarer.
+   * Kuerzel wie K, M oder B gibt es nicht mehr. Bis knapp unter eine Milliarde
+   * wird ausgeschrieben, darueber in Exponentialschreibweise - das ist
+   * eindeutig und spart das Raten, wofuer ein Buchstabe stand.
    */
   FORMAT: {
-    SUFFIXE: ['', 'K', 'M', 'B'],
-    NACHKOMMA: 2
+    /** Unter diesem Wert werden Nachkommastellen gezeigt. */
+    KLEIN_BIS: 10,
+    /**
+     * Zwei Nachkommastellen unter KLEIN_BIS: am Spielanfang sind die Zahlen
+     * klein, da ist der Unterschied zwischen 6,25 und 6,80 sichtbarer
+     * Fortschritt.
+     */
+    NACHKOMMA_KLEIN: 2,
+    /** Ab hier Exponentialschreibweise. */
+    EXPONENT_AB: 1e9,
+    /** Nachkommastellen der Mantisse; nachlaufende Nullen entfallen. */
+    NACHKOMMA_MANTISSE: 2,
+    TAUSENDER_TRENNER: '.',
+    DEZIMAL_TRENNER: ','
   }
 };

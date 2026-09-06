@@ -217,7 +217,7 @@ const UI = {
 
     k.schuesse.textContent = Logik.formatiereZahl(Math.floor(st.schuesse));
     k.quote.textContent = st.schuesse > 0
-      ? (100 * st.treffer / st.schuesse).toFixed(1) + ' %'
+      ? (100 * st.treffer / st.schuesse).toFixed(1).replace('.', DATA.FORMAT.DEZIMAL_TRENNER) + ' %'
       : '–';
     k.spielzeit.textContent = Logik.formatiereDauer(st.spielzeit);
 
@@ -241,7 +241,7 @@ const UI = {
       const zeile = this.verteilungsZeilen[ring];
       zeile.fuellung.style.width = groesster > 0 ? (100 * anteil / groesster) + '%' : '0%';
       zeile.prozent.textContent = Verteilung.gewicht > 0
-        ? (100 * anteil).toFixed(anteil >= 0.1 ? 0 : 1) + ' %'
+        ? (100 * anteil).toFixed(anteil >= 0.1 ? 0 : 1).replace('.', DATA.FORMAT.DEZIMAL_TRENNER) + ' %'
         : '–';
     }
   }

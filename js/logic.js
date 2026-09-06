@@ -253,18 +253,53 @@ const Logik = {
 
   // --- Darstellung --------------------------------------------------------
 
-  /** Zahlformatierung mit Suffixen, danach Exponentialschreibweise. */
+  /**
+   * Die eine Zahlformatierung des Spiels - jede Anzeige geht hier durch.
+   *
+   * Unter 10 mit zwei Nachkommastellen, bis knapp unter eine Milliarde als
+   * ganze Zahl mit Tausenderpunkten, darueber in Exponentialschreibweise.
+   * Durchgehend deutsche Schreibweise.
+   */
   formatiereZahl(wert) {
     if (!isFinite(wert)) return '∞';
-    if (wert < 1000) {
-      return wert < 10 && wert % 1 !== 0 ? wert.toFixed(1) : Math.floor(wert).toString();
+    const f = DATA.FORMAT;
+
+    if (wert < 0) return '-' + this.formatiereZahl(-wert);
+
+    if (wert < f.KLEIN_BIS) {
+      const klein = wert.toFixed(f.NACHKOMMA_KLEIN);
+      // 9,999 rundet auf 10 und gehoert dann in den ganzzahligen Bereich -
+      // '10,00' kommt in diesem Schema sonst nirgends vor.
+      if (Number(klein) < f.KLEIN_BIS) return klein.replace('.', f.DEZIMAL_TRENNER);
+      return String(f.KLEIN_BIS);
     }
-    const stufe = Math.floor(Math.log10(wert) / 3);
-    if (stufe < DATA.FORMAT.SUFFIXE.length) {
-      const zahl = wert / Math.pow(1000, stufe);
-      return zahl.toFixed(DATA.FORMAT.NACHKOMMA) + ' ' + DATA.FORMAT.SUFFIXE[stufe];
+
+    if (wert < f.EXPONENT_AB) {
+      return this.gruppiere(Math.floor(wert));
     }
-    return wert.toExponential(DATA.FORMAT.NACHKOMMA).replace('e+', 'e');
+
+    let exponent = Math.floor(Math.log10(wert));
+    let mantisse = wert / Math.pow(10, exponent);
+    // Runden kann die Mantisse ueber 10 heben (9,999e9 wird zu 10,00e9);
+    // dann gehoert eine Stelle in den Exponenten.
+    if (Number(mantisse.toFixed(f.NACHKOMMA_MANTISSE)) >= 10) {
+      mantisse /= 10;
+      exponent += 1;
+    }
+
+    // Nachlaufende Nullen entfallen - also 1e9, nicht 1,00e9.
+    const text = mantisse.toFixed(f.NACHKOMMA_MANTISSE)
+      .replace(/0+$/, '')
+      .replace(/\.$/, '')
+      .replace('.', f.DEZIMAL_TRENNER);
+
+    return text + 'e' + exponent;
+  },
+
+  /** Ganze Zahl mit Tausendertrennern. */
+  gruppiere(ganzzahl) {
+    return ganzzahl.toString()
+      .replace(/\B(?=(\d{3})+(?!\d))/g, DATA.FORMAT.TAUSENDER_TRENNER);
   },
 
   /** Dauer in Sekunden als lesbare Angabe. */

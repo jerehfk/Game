@@ -117,7 +117,7 @@ function simulieren(dauer, marken, art){
 }
 
 // Marken der Zieltabelle aus dem Änderungsauftrag.
-const marken=[60,900,3600,8*3600,86400,7*86400,30*86400];
+const marken=[60,600,3600,8*3600,86400,7*86400,30*86400];
 const zeitName=(t)=> t<3600 ? (t/60).toFixed(0)+' min' : (t<86400 ? (t/3600).toFixed(0)+' h' : (t/86400).toFixed(0)+' d');
 const erreicht=(ringe)=>{ let h=0; for(let i=0;i<10;i++) if(ringe[i]>1) h=i+1; return h; };
 const kurz=(v)=> v>=1e6 ? v.toExponential(2) : v.toFixed(0);
