@@ -38,15 +38,15 @@ const Logik = {
   kostenZielgenauigkeit(level) {
     const z = DATA.ZIELGENAUIGKEIT;
     const stufe = Math.floor((level - 1) / z.KOSTEN_SPRUNG_ALLE);
-    return z.KOSTEN_BASIS
+    return Math.round(z.KOSTEN_BASIS
       * Math.pow(z.KOSTEN_FAKTOR, level - 1)
-      * Math.pow(z.KOSTEN_SPRUNG_FAKTOR, stufe);
+      * Math.pow(z.KOSTEN_SPRUNG_FAKTOR, stufe));
   },
 
   /** Preis fuer den Aufstieg von Level L auf L+1 beim Schussintervall. */
   kostenSchussintervall(level) {
     const s = DATA.SCHUSSINTERVALL;
-    return s.KOSTEN_BASIS * Math.pow(s.KOSTEN_FAKTOR, level - 1);
+    return Math.round(s.KOSTEN_BASIS * Math.pow(s.KOSTEN_FAKTOR, level - 1));
   },
 
   /**
@@ -57,6 +57,14 @@ const Logik = {
    * damit eine Entscheidung und nicht mehr nur eine Frage der Trefferquote.
    */
   kostenRing(ring, level) {
+    return Math.round(this.rohkostenRing(ring, level));
+  },
+
+  /**
+   * Ungerundeter Preis - nur intern, damit sich Rundungen nicht summieren,
+   * wenn mehrere Level am Stueck gerechnet werden.
+   */
+  rohkostenRing(ring, level) {
     const r = DATA.RINGE[ring - 1];
     return r.grundpreis * Math.pow(r.kostenfaktor, level - 1);
   },
@@ -64,11 +72,23 @@ const Logik = {
   /**
    * Preis fuer mehrere Level am Stueck - geometrische Summe, nicht
    * Einzelpreis mal Anzahl: der Preis waechst ja zwischen den Leveln mit.
+   *
+   * Ein einzelnes Level laeuft an der Reihe vorbei. Rechnerisch ist
+   * (q^1 - 1) / (q - 1) exakt 1, aber der Ausdruck wird von links nach rechts
+   * ausgewertet: erst Grundpreis mal Zaehler, dann geteilt. Bei Ring 3 ergab
+   * 1000 * 0,28000000000000003 / 0,28000000000000003 genau 999,9999999999999
+   * und damit den Preis 999 statt 1.000.
+   *
+   * Fuer mehrere Level bleibt die Reihe, jetzt aber geklammert und gerundet:
+   * Preise sind im Spiel immer ganzzahlig.
    */
   kostenRingMenge(ring, level, anzahl) {
     if (anzahl <= 0) return 0;
+    if (anzahl === 1) return this.kostenRing(ring, level);
+
     const q = DATA.RINGE[ring - 1].kostenfaktor;
-    return this.kostenRing(ring, level) * (Math.pow(q, anzahl) - 1) / (q - 1);
+    const reihe = (Math.pow(q, anzahl) - 1) / (q - 1);
+    return Math.round(this.rohkostenRing(ring, level) * reihe);
   },
 
   /**
@@ -83,12 +103,17 @@ const Logik = {
     const rest = this.ringMaxLevel(ring) - level;
     if (rest <= 0) return 0;
 
-    const start = this.kostenRing(ring, level);
-    if (guthaben < start) return 0;
+    if (guthaben < this.kostenRing(ring, level)) return 0;
 
     const q = DATA.RINGE[ring - 1].kostenfaktor;
-    const bezahlbar = Math.floor(Math.log(1 + guthaben * (q - 1) / start) / Math.log(q));
-    return Math.min(bezahlbar, rest);
+    const start = this.rohkostenRing(ring, level);
+    let anzahl = Math.min(rest,
+      Math.floor(Math.log(1 + guthaben * (q - 1) / start) / Math.log(q)));
+
+    // Gegen den gerundeten Preis gegenpruefen, mit dem auch gekauft wird:
+    // sonst nennt die Karte eine Menge, die der Kauf danach ablehnt.
+    while (anzahl > 1 && this.kostenRingMenge(ring, level, anzahl) > guthaben) anzahl--;
+    return anzahl;
   },
 
   /**
@@ -165,10 +190,12 @@ const Logik = {
     const stufe = this.ringAscensions(ring, ascensions);
     const erreichterZuwachs = this.ringZuwachs(ring, this.ringMaxLevel(ring, stufe), stufe);
 
-    return a.PREIS_VIELFACHES
+    // Gerundet wie jeder andere Preis - Anzeige und Kaufpruefung nehmen
+    // denselben Wert, sonst steht da 999 und der Kauf scheitert an 999,9999.
+    return Math.round(a.PREIS_VIELFACHES
       * r.grundpreis
       * (erreichterZuwachs / r.grundzuwachs)
-      * Math.pow(a.PREIS_WACHSTUM, stufe);
+      * Math.pow(a.PREIS_WACHSTUM, stufe));
   },
 
   /** Steht der Ring an seinem Maximallevel? */
