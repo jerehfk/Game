@@ -77,8 +77,19 @@ const Logik = {
    * Grundpreis aus wieder von vorn.
    */
   ringGrundpreis(ring, ascensions) {
-    return DATA.RINGE[ring - 1].grundpreis
-      * Math.pow(DATA.ASCENSION.GRUNDPREIS_FAKTOR, this.ringAscensions(ring, ascensions));
+    const r = DATA.RINGE[ring - 1];
+    const a = this.ringAscensions(ring, ascensions);
+    if (a <= 0) return r.grundpreis;
+
+    // Jede Ascension setzt den Grundpreis auf den Preis des zuletzt
+    // erreichbaren Levels, multipliziert ihn also mit
+    // kostenfaktor^maxLevel(Stufe). Ueber alle bisherigen Stufen summieren
+    // sich diese Exponenten zu 25a + 10*a*(a-1)/2 - deshalb reicht eine
+    // Potenz statt einer Schleife.
+    const m = DATA.ASCENSION;
+    const exponent = m.MAX_LEVEL_BASIS * a
+      + m.MAX_LEVEL_JE_ASCENSION * a * (a - 1) / 2;
+    return r.grundpreis * Math.pow(r.kostenfaktor, exponent);
   },
 
   /**

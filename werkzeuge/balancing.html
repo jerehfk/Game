@@ -17,7 +17,8 @@ function streuung(l){const z=DATA.ZIELGENAUIGKEIT;l=Math.min(l,z.MAX_LEVEL);retu
 function intervall(l){const s=DATA.SCHUSSINTERVALL;l=Math.min(l,s.MAX_LEVEL);return s.START_SEKUNDEN*Math.pow(s.FAKTOR_PRO_LEVEL,l-1);}
 function kostenZG(l){const z=DATA.ZIELGENAUIGKEIT;return z.KOSTEN_BASIS*Math.pow(z.KOSTEN_FAKTOR,l-1)*Math.pow(z.KOSTEN_SPRUNG_FAKTOR,Math.floor((l-1)/z.KOSTEN_SPRUNG_ALLE));}
 function kostenSI(l){const s=DATA.SCHUSSINTERVALL;return s.KOSTEN_BASIS*Math.pow(s.KOSTEN_FAKTOR,l-1);}
-function ringGrundpreis(ring,asc){return DATA.RINGE[ring-1].grundpreis*Math.pow(DATA.ASCENSION.GRUNDPREIS_FAKTOR,asc);}
+function ringGrundpreis(ring,asc){const r=DATA.RINGE[ring-1],m=DATA.ASCENSION;
+  return r.grundpreis*Math.pow(r.kostenfaktor, m.MAX_LEVEL_BASIS*asc + m.MAX_LEVEL_JE_ASCENSION*asc*(asc-1)/2);}
 function kostenRing(ring,l,asc){return ringGrundpreis(ring,asc)*Math.pow(DATA.RINGE[ring-1].kostenfaktor,l-1);}
 function ringFaktor(asc){const a=DATA.ASCENSION;return Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL, a.Y_BASIS+a.Y_JE_ASCENSION*asc);}
 function ringMaxLevel(asc){const a=DATA.ASCENSION;return a.MAX_LEVEL_BASIS+a.MAX_LEVEL_JE_ASCENSION*asc;}

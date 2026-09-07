@@ -202,22 +202,19 @@ const DATA = {
     Y_JE_ASCENSION: 0.1,
 
     /**
-     * Je Aufstieg verdreifacht sich der Grundpreis des Rings, und die
-     * Preiskurve beginnt von diesem neuen Grundpreis aus wieder bei Level 1.
+     * Der Aufstieg kostet das Hundertfache des naechsten, nicht mehr kaufbaren
+     * Levels. Genau dieses Level wird anschliessend zum neuen Grundpreis des
+     * Rings - der Aufstieg kostet also immer das Hundertfache dessen, was
+     * danach ein einzelnes Level kostet.
      *
-     * Ohne diesen Faktor kostete der Wiederaufbau von Ring 1 auf sein neues
-     * Maximum weniger als ein Drittel der Ascension selbst - wer gerade genug
-     * fuer den Aufstieg hatte, kaufte den Ring danach in Sekunden wieder aus
-     * und die Mechanik verpuffte. Mit 3 kosten Aufstieg und Wiederaufbau
-     * ungefaehr gleich viel, und dieses Verhaeltnis bleibt ueber alle
-     * Aufstiege gleich: beide wachsen mit 3^a * Kostenfaktor^(10a).
-     *
-     * Das ist der Regler fuer das Tempo dieser Mechanik - kleiner heisst
-     * schnellerer Wiederaufbau, groesser heisst zaeher.
+     * Der Grundpreis waechst damit sehr kraeftig: bei Ring 1 von 4 auf 382 auf
+     * rund 2,25e5. Eine blosse Verdreifachung reichte nicht - der
+     * Wiederaufbau kostete dann ungefaehr so viel wie der Aufstieg selbst, und
+     * wer gerade genug zusammenhatte, kaufte den Ring in einer Minute wieder
+     * aus. So kostet er das rund 25-fache und wird von Runde zu Runde zaeher.
+     * Dass die Mechanik nach einigen Aufstiegen je Ring auslaeuft, ist
+     * beabsichtigt: danach uebernimmt die naechste Ebene.
      */
-    GRUNDPREIS_FAKTOR: 3,
-
-    /** Der Aufstieg kostet so viel wie das naechste, nicht mehr kaufbare Level. */
     PREIS_VIELFACHES: 100
   },
 
@@ -300,8 +297,40 @@ const DATA = {
      * Schuss nachgespielt, sondern ueber den Erwartungswert verrechnet.
      */
     NACHRECHNEN_AB_SEKUNDEN: 5,
-    /** Obergrenze einzeln ausgewerteter Schuesse pro Frame. */
-    MAX_SCHUESSE_PRO_FRAME: 500
+    /**
+     * Obergrenze einzeln ausgewuerfelter Schuesse pro Frame.
+     *
+     * Grosszuegig bemessen, damit auch der schnellste Zeitraffer des
+     * Testmodus jeden Schuss einzeln auswuerfelt: bei Faktor 1000 und der
+     * Luecken-Schwelle von 5 Sekunden koennen 5000 Schuesse in einem Frame
+     * zusammenkommen. Einzeln zu wuerfeln kostet dabei Bruchteile einer
+     * Millisekunde - teuer ist nur das Zeichnen, und dafuer gibt es
+     * MAX_PFEILE_PRO_FRAME. Wuerde hier abgeschnitten, liefe der Ueberhang
+     * ueber den Erwartungswert und genau die Zufallsstreuung verschwaende,
+     * die der Testmodus sichtbar machen soll.
+     */
+    MAX_SCHUESSE_PRO_FRAME: 6000,
+    /**
+     * So viele Pfeile werden je Frame hoechstens gezeichnet. Alles darueber
+     * wird nur gerechnet - die Scheibe zeigt dann eine Stichprobe.
+     */
+    MAX_PFEILE_PRO_FRAME: 20
+  },
+
+  /**
+   * Versteckter Testmodus mit Zeitraffer - Werkzeug, kein Spielinhalt.
+   *
+   * Er existiert nur, wenn PARAMETER in der Query-String steht. Das ist kein
+   * Schutz und soll keiner sein: bei einer statischen Seite liegt der Code
+   * ohnehin im Browser jedes Besuchers. Ein Passwortfeld waere Scheinsicherheit.
+   */
+  TESTMODUS: {
+    PARAMETER: 'test',
+    FAKTOREN: [1, 5, 25, 100, 1000],
+    /** Warnfarbe, damit die Leiste als Fremdkoerper erkennbar bleibt. */
+    RANDFARBE: '#d29922',
+    /** Wie oft je Sekunde die Spielzeit in der Leiste nachgezogen wird. */
+    ANZEIGE_HZ: 5
   },
 
   /** Speicherstand. */

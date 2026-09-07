@@ -18,6 +18,7 @@ const Spiel = {
     Upgrades.aufbauen();
     Scheibe.initialisieren(document.getElementById('scheibe'));
     Overlay.initialisieren();
+    Testmodus.initialisieren();
     UI.initialisieren();
 
     const abwesend = Speicher.laden();
@@ -91,12 +92,17 @@ const Spiel = {
     // Groessere Luecken entstehen, wenn der Tab im Hintergrund lag: dort steht
     // requestAnimationFrame still. Sie einzeln nachzuschiessen waere teuer und
     // wuerde die Scheibe mit einem Schlag zupflastern.
+    //
+    // Geprueft wird die echte Luecke, nicht die gedehnte: dass der Tab im
+    // Hintergrund lag, ist ein Ereignis der Wanduhr - der Offline-Fortschritt
+    // rechnet deshalb auch im Zeitraffer mit echter Zeit.
     if (delta > DATA.SCHLEIFE.NACHRECHNEN_AB_SEKUNDEN) {
       this.nachrechnen(delta);
       delta = 0;
     }
 
-    this.rechnen(delta);
+    // Die eine Stelle, an der der Testmodus ins Spiel greift; ohne ihn 1.
+    this.rechnen(delta * Testmodus.zeitfaktor());
 
     this.speicherKonto += delta;
     if (this.speicherKonto >= DATA.SPEICHERN.AUTOSAVE_SEKUNDEN) {
@@ -135,21 +141,31 @@ const Spiel = {
       this.schuesseVerrechnen(ueberhang);
     }
 
-    for (let i = 0; i < anzahl; i++) this.einSchuss(streuung);
+    // Jeder Schuss wird einzeln ausgewuerfelt - auch im Zeitraffer, sonst
+    // verschwaende genau die Zufallsstreuung, die zu pruefen ist. Teuer ist
+    // nur das Zeichnen: davon bekommt die Scheibe hoechstens eine Stichprobe.
+    const zeichnen = Math.min(anzahl, DATA.SCHLEIFE.MAX_PFEILE_PRO_FRAME);
+    for (let i = 0; i < anzahl; i++) this.einSchuss(streuung, i < zeichnen);
   },
 
-  /** Ein einzelner, tatsaechlich ausgewuerfelter Schuss. */
-  einSchuss(streuung) {
+  /**
+   * Ein einzelner, tatsaechlich ausgewuerfelter Schuss.
+   *
+   * Gerechnet wird immer alles - Statistik, Verteilung, Punkte, Zaehler.
+   * 'zeichnen' entscheidet nur, ob der Schuss auch auf der Scheibe erscheint;
+   * bei sehr vielen Schuessen je Frame sieht man davon eine Stichprobe.
+   */
+  einSchuss(streuung, zeichnen = true) {
     const s = Logik.schuss(streuung);
     const st = spiel.statistik;
 
-    // Gerechnet wird mit dem echten Abstand, gezeichnet an der gestreckten
-    // Position - sonst laege die halbe Scheibe in einem einzigen Pixel.
-    const anzeige = Logik.anzeigePosition(s);
-
     st.schuesse++;
     Verteilung.melden(s.ring);
-    Scheibe.pfeilMerken(anzeige.x, anzeige.y);
+
+    // Gerechnet wird mit dem echten Abstand, gezeichnet an der gestreckten
+    // Position - sonst laege die halbe Scheibe in einem einzigen Pixel.
+    const anzeige = zeichnen ? Logik.anzeigePosition(s) : null;
+    if (zeichnen) Scheibe.pfeilMerken(anzeige.x, anzeige.y);
 
     if (s.ring > 0) {
       const zuwachs = Logik.ringZuwachs(s.ring, spiel.ringLevel[s.ring - 1]);
@@ -161,7 +177,7 @@ const Spiel = {
       spiel.punkte += spiel.punkteProTreffer;
       spiel.punkteProTreffer += zuwachs;
 
-      Scheibe.trefferMerken(anzeige.x, anzeige.y, s.ring, zuwachs);
+      if (zeichnen) Scheibe.trefferMerken(anzeige.x, anzeige.y, s.ring, zuwachs);
     }
   },
 
