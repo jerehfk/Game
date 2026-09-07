@@ -170,7 +170,82 @@ const Logik = {
    */
   ringZuwachs(ring, level, ascensions) {
     const grund = DATA.RINGE[ring - 1].grundzuwachs;
-    return grund * Math.pow(this.ringFaktor(ring, ascensions), level - 1);
+    return grund * this.schwungMultiplikator()
+      * Math.pow(this.ringFaktor(ring, ascensions), level - 1);
+  },
+
+  // --- Prestige -----------------------------------------------------------
+
+  /** Sind die beiden mit Federn gekauften Achsen schon sichtbar? */
+  globaleUpgradesFrei() {
+    return spiel.prestiges > 0;
+  },
+
+  /** Vervielfacht alle Ring-Zuwaechse; ohne gekauftes Schwung genau 1. */
+  schwungMultiplikator() {
+    return Math.pow(DATA.PRESTIGE.SCHWUNG_MULTIPLIKATOR, spiel.schwungLevel);
+  },
+
+  /**
+   * Federn fuer einen Treffer in diesem Ring.
+   *
+   * Die Kopplungsregel: ein Ring liefert nur, wenn sein Ring-Upgrade
+   * freigeschaltet ist. Damit muss man sich jede Runde erst bis Ring 5
+   * durcharbeiten, bevor ueberhaupt eine Feder faellt - sonst haengen die
+   * Federn allein an der Schusszahl.
+   */
+  federnFuerRing(ring) {
+    if (ring <= 0) return 0;
+    if (!this.ringFreigeschaltet(ring)) return 0;
+    return DATA.PRESTIGE.FEDERN_JE_RING[ring - 1];
+  },
+
+  /** Erwartete Federn je Schuss - fuer die Offline-Zeit. */
+  erwarteteFedernProSchuss(stand) {
+    const p = this.ringWahrscheinlichkeiten(this.streuung(stand.zielgenauigkeitLevel));
+    let summe = 0;
+    for (let i = 0; i < p.length; i++) summe += p[i] * this.federnFuerRing(i + 1);
+    return summe;
+  },
+
+  /**
+   * Preis fuer mehrere Level einer Kurve basis * faktor^(level-1) am Stueck -
+   * dieselbe geometrische Summe wie bei den Ringen, geklammert und gerundet.
+   */
+  preisreihe(basis, faktor, level, anzahl) {
+    if (anzahl <= 0) return 0;
+    const start = basis * Math.pow(faktor, level - 1);
+    if (anzahl === 1) return Math.round(start);
+    return Math.round(start * ((Math.pow(faktor, anzahl) - 1) / (faktor - 1)));
+  },
+
+  /**
+   * Wie viele Stufen ein Guthaben hergibt, wenn der Preis nur ueber
+   * kostenFuer erreichbar ist. Hochzaehlen genuegt: die Federn-Preise steigen
+   * mit 1,08 bis 2,5 je Level, es sind also nie viele.
+   */
+  maxKaufbareStufen(u, guthaben, rest) {
+    let anzahl = 0;
+    while (anzahl < rest && u.kostenFuer(anzahl + 1) <= guthaben) anzahl++;
+    return anzahl;
+  },
+
+  preisZielgenauigkeit(level) {
+    const p = DATA.PRESTIGE;
+    return Math.round(p.ZIELGENAUIGKEIT_PREIS_BASIS
+      * Math.pow(p.ZIELGENAUIGKEIT_PREIS_FAKTOR, level - 1));
+  },
+
+  preisSchussintervall(level) {
+    const p = DATA.PRESTIGE;
+    return Math.round(p.SCHUSSINTERVALL_PREIS_BASIS
+      * Math.pow(p.SCHUSSINTERVALL_PREIS_FAKTOR, level - 1));
+  },
+
+  /** Schwung beginnt bei Level 0, deshalb der Exponent ohne Minus-Eins. */
+  preisSchwung(level) {
+    const p = DATA.PRESTIGE;
+    return Math.round(p.SCHWUNG_PREIS_BASIS * Math.pow(p.SCHWUNG_PREIS_FAKTOR, level));
   },
 
   // --- Ascension ----------------------------------------------------------
@@ -464,6 +539,11 @@ const Logik = {
     return 0;
   },
 
+  /** Feste Nachkommastellen in deutscher Schreibweise. */
+  komma(wert, stellen) {
+    return wert.toFixed(stellen).replace('.', DATA.FORMAT.DEZIMAL_TRENNER);
+  },
+
   /** Ganze Zahl mit Tausendertrennern. */
   gruppiere(ganzzahl) {
     return ganzzahl.toString()
@@ -501,40 +581,60 @@ const Upgrades = {
     // In der ersten Ebene gibt es nur die zehn Ring-Upgrades. Die beiden
     // globalen Achsen bleiben als Code stehen und kommen mit dem Prestige
     // zurueck - siehe DATA.EBENE.
-    if (DATA.EBENE.GLOBALE_UPGRADES_FREI) this.globaleAufbauen();
+    if (Logik.globaleUpgradesFrei()) this.globaleAufbauen();
     this.ringeAufbauen();
   },
 
+  /**
+   * Die drei mit Federn gekauften Upgrades. Sie erscheinen erst nach dem
+   * ersten Prestige und ueberdauern jede Runde.
+   */
   globaleAufbauen() {
+    const p = DATA.PRESTIGE;
+
     this.alle.push({
       id: 'zielgenauigkeit',
-      gruppe: 'zielgenauigkeit',
+      gruppe: 'federn',
       name: 'Zielgenauigkeit',
-      farbe: null,
+      waehrung: 'federn',
       maxLevel: () => DATA.ZIELGENAUIGKEIT.MAX_LEVEL,
       level: () => spiel.zielgenauigkeitLevel,
-      kosten: () => Logik.kostenZielgenauigkeit(spiel.zielgenauigkeitLevel),
-      wirkung: () => {
-        const s = Logik.streuung(spiel.zielgenauigkeitLevel);
-        const quote = Logik.trefferwahrscheinlichkeit(s);
-        return 'Streuung ' + s.toFixed(3) + ' · ' + (100 * quote).toFixed(1) + ' % auf der Scheibe';
-      },
-      anheben: () => { spiel.zielgenauigkeitLevel++; }
+      wirkung: () => 'Streuung ' + Logik.komma(Logik.streuung(spiel.zielgenauigkeitLevel), 3),
+      kostenFuer: (anzahl) => Logik.preisreihe(
+        p.ZIELGENAUIGKEIT_PREIS_BASIS, p.ZIELGENAUIGKEIT_PREIS_FAKTOR,
+        spiel.zielgenauigkeitLevel, anzahl),
+      anhebenUm: (anzahl) => { spiel.zielgenauigkeitLevel += anzahl; }
     });
 
     this.alle.push({
       id: 'schussintervall',
-      gruppe: 'schussintervall',
+      gruppe: 'federn',
       name: 'Schussintervall',
-      farbe: null,
+      waehrung: 'federn',
       maxLevel: () => DATA.SCHUSSINTERVALL.MAX_LEVEL,
       level: () => spiel.schussintervallLevel,
-      kosten: () => Logik.kostenSchussintervall(spiel.schussintervallLevel),
       wirkung: () => {
         const i = Logik.schussintervall(spiel.schussintervallLevel);
-        return i.toFixed(3) + ' s · ' + (1 / i).toFixed(2) + ' Schuss/s';
+        return Logik.komma(i, 2) + ' s · ' + Logik.komma(1 / i, 2) + ' Schuss/s';
       },
-      anheben: () => { spiel.schussintervallLevel++; }
+      kostenFuer: (anzahl) => Logik.preisreihe(
+        p.SCHUSSINTERVALL_PREIS_BASIS, p.SCHUSSINTERVALL_PREIS_FAKTOR,
+        spiel.schussintervallLevel, anzahl),
+      anhebenUm: (anzahl) => { spiel.schussintervallLevel += anzahl; }
+    });
+
+    this.alle.push({
+      id: 'schwung',
+      gruppe: 'federn',
+      name: 'Schwung',
+      waehrung: 'federn',
+      maxLevel: () => Infinity,
+      level: () => spiel.schwungLevel,
+      wirkung: () => '×' + Logik.formatiereZahl(Logik.schwungMultiplikator()),
+      // Schwung beginnt bei Level 0, deshalb der um eins verschobene Start.
+      kostenFuer: (anzahl) => Logik.preisreihe(
+        p.SCHWUNG_PREIS_BASIS, p.SCHWUNG_PREIS_FAKTOR, spiel.schwungLevel + 1, anzahl),
+      anhebenUm: (anzahl) => { spiel.schwungLevel += anzahl; }
     });
   },
 
@@ -569,15 +669,19 @@ const Upgrades = {
     return u.level() >= u.maxLevel();
   },
 
-  bezahlbar(u) {
-    return !this.amMaximum(u) && spiel.punkte >= u.kosten();
+  /** Woraus dieses Upgrade bezahlt wird - Punkte oder Federn. */
+  guthaben(u) {
+    return u.waehrung === 'federn' ? spiel.federn : spiel.punkte;
   },
 
-  kaufen(u) {
-    if (!this.bezahlbar(u)) return false;
-    spiel.punkte -= u.kosten();
-    u.anheben();
-    return true;
+  abbuchen(u, betrag) {
+    if (u.waehrung === 'federn') spiel.federn -= betrag;
+    else spiel.punkte -= betrag;
+  },
+
+  bezahlbar(u) {
+    const anzahl = this.anzahlFuer(u);
+    return anzahl > 0 && this.guthaben(u) >= u.kostenFuer(anzahl);
   },
 
   /** Die aktuell gewaehlte Kaufmenge, 1 / 10 / 100 oder 'MAX'. */
@@ -597,8 +701,13 @@ const Upgrades = {
    */
   anzahlFuer(u) {
     const menge = this.menge();
-    if (menge === 'MAX') return u.maxAnzahl();
-    return Math.max(0, Math.min(menge, u.maxLevel() - u.level()));
+    const rest = u.maxLevel() - u.level();
+    if (menge !== 'MAX') return Math.max(0, Math.min(menge, rest));
+
+    // MAX: die Ringe loesen die Summenformel auf, die Federn-Upgrades zaehlen
+    // hoch - dort sind es nie viele Level, weil die Preise steil steigen.
+    if (u.maxAnzahl) return u.maxAnzahl();
+    return Logik.maxKaufbareStufen(u, this.guthaben(u), rest);
   },
 
   /** Mehrere Level auf einmal. Reicht das Guthaben nicht, passiert nichts. */
@@ -607,9 +716,9 @@ const Upgrades = {
     if (anzahl <= 0) return false;
 
     const kosten = u.kostenFuer(anzahl);
-    if (spiel.punkte < kosten) return false;
+    if (this.guthaben(u) < kosten) return false;
 
-    spiel.punkte -= kosten;
+    this.abbuchen(u, kosten);
     u.anhebenUm(anzahl);
     return true;
   },
@@ -626,6 +735,35 @@ const Upgrades = {
    * bereits freigeschalteter Ring bleibt frei: dass Ring 3 auf Level 1
    * zurueckfaellt, sperrt Ring 4 nicht wieder zu.
    */
+  /** Reichen die angesammelten Federn fuer ein Prestige? */
+  prestigeMoeglich() {
+    return spiel.federnAnstehend >= DATA.PRESTIGE.MINDEST_FEDERN;
+  },
+
+  /**
+   * Prestige: die Runde faellt komplett zurueck, die Federn werden
+   * gutgeschrieben.
+   *
+   * Zurueckgesetzt wird ueber Zustand.neu(), damit kein Feld vergessen wird -
+   * auch die Grundpreise der Ringe, die an den Ascensions haengen. Danach
+   * werden genau die Felder wieder eingesetzt, die das Prestige ueberdauern.
+   */
+  prestige() {
+    if (!this.prestigeMoeglich()) return false;
+
+    const behalten = {
+      federn: spiel.federn + spiel.federnAnstehend,
+      prestiges: spiel.prestiges + 1,
+      zielgenauigkeitLevel: spiel.zielgenauigkeitLevel,
+      schussintervallLevel: spiel.schussintervallLevel,
+      schwungLevel: spiel.schwungLevel,
+      kaufMengeIndex: spiel.kaufMengeIndex
+    };
+
+    spiel = Object.assign(Zustand.neu(), behalten);
+    return true;
+  },
+
   ascensionMoeglich(ring) {
     return Logik.ringAmMaximum(ring) && spiel.punkte >= Logik.ascensionPreis(ring);
   },

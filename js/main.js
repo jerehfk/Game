@@ -171,6 +171,7 @@ const Spiel = {
       const zuwachs = Logik.ringZuwachs(s.ring, spiel.ringLevel[s.ring - 1]);
       st.treffer++;
       st.ringTreffer[s.ring - 1]++;
+      spiel.federnAnstehend += Logik.federnFuerRing(s.ring);
 
       // Reihenfolge: erst gutschreiben, dann erhoehen. Andersherum wuerde ein
       // Treffer bereits von seinem eigenen Zuwachs profitieren.
@@ -205,6 +206,8 @@ const Spiel = {
       const treffer = p[i] * anzahl;
       st.ringTreffer[i] += treffer;
       st.treffer += treffer;
+      // Federn nach derselben Kopplungsregel wie im laufenden Spiel.
+      spiel.federnAnstehend += treffer * Logik.federnFuerRing(i + 1);
     }
     st.schuesse += anzahl;
     Verteilung.meldenViele(p, anzahl);

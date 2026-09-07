@@ -234,3 +234,59 @@ html, body {
 @media (max-width: 560px) {
   .kopf { padding: 8px 4px; font-size: 10px; }
 }
+
+/* --- Prestige-Block in der rechten Spalte --------------------------------- */
+
+.karte.prestige { margin-top: 16px; }
+
+#federn-anstehend {
+  margin: 12px 0 8px;
+  color: var(--leise);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+#knopf-prestige {
+  display: block;
+  width: 100%;
+  padding: 9px 0;
+  background: #4a3f1d;
+  border: 1px solid #d29922;
+  border-radius: 6px;
+  color: #ffe6a8;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .22em;
+  cursor: pointer;
+}
+#knopf-prestige:hover:not(:disabled) { background: #5d4e24; }
+#knopf-prestige:disabled { opacity: .4; cursor: not-allowed; }
+
+#federn-upgrades { margin-top: 12px; }
+#federn-upgrades:empty { display: none; }
+
+/* Aufbau wie die Ring-Karten, nur ohne Ringfarbe. */
+.feder {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  background: var(--grund);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.feder:last-child { margin-bottom: 0; }
+.feder:hover:not(:disabled) { border-color: var(--leise); }
+.feder.arm { opacity: .4; cursor: not-allowed; }
+.feder .oben { display: block; font-size: 12px; font-weight: 600; }
+.feder .unten {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--leise);
+}

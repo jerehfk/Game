@@ -228,8 +228,48 @@ const DATA = {
    * eine Zeile; den Code jetzt zu loeschen und dann neu zu schreiben waere
    * Verschwendung.
    */
+  /**
+   * Prestige-Ebene: die Runde wird komplett zurueckgesetzt, dafuer gibt es
+   * Federn - eine dauerhafte Waehrung fuer drei Upgrades ueber alle Runden.
+   */
+  PRESTIGE: {
+    /**
+     * Federn je Treffer, Index 0 = Ring 1. Nur die inneren Ringe geben etwas,
+     * mit Verdopplung nach innen.
+     *
+     * Dazu die Kopplungsregel in Logik.federnFuerRing: ein Ring gibt nur dann
+     * Federn, wenn sein Ring-Upgrade freigeschaltet ist. Ohne sie haengen die
+     * Federn allein an der Schusszahl und nicht am Fortschritt - dann waere
+     * Zuschauen ohne zu kaufen die beste Strategie.
+     */
+    FEDERN_JE_RING: [0, 0, 0, 0, 1, 2, 4, 8, 16, 32],
+
+    /** Darunter ist der Prestige-Knopf gesperrt. */
+    MINDEST_FEDERN: 10,
+
+    /** Zielgenauigkeit, gekauft mit Federn. Preis fuer Level L auf L+1. */
+    ZIELGENAUIGKEIT_PREIS_BASIS: 1,
+    ZIELGENAUIGKEIT_PREIS_FAKTOR: 1.08,
+
+    /** Schussintervall, gekauft mit Federn. */
+    SCHUSSINTERVALL_PREIS_BASIS: 3,
+    SCHUSSINTERVALL_PREIS_FAKTOR: 1.10,
+
+    /**
+     * Schwung vervielfacht alle Ring-Zuwaechse. Sein Level beginnt bei 0, der
+     * Multiplikator also bei 1,5^0 = 1 - deshalb steht im Preis der Exponent
+     * ohne die sonst uebliche Minus-Eins.
+     *
+     * Ohne Schwung braechte das erste Prestige nur rund 40 Prozent, weil sich
+     * Zielgenauigkeit und Schussintervall je Level nur um gut ein Prozent
+     * bewegen. Fuer einen Reset, der alles genommen hat, ist das zu wenig.
+     */
+    SCHWUNG_MULTIPLIKATOR: 1.5,
+    SCHWUNG_PREIS_BASIS: 10,
+    SCHWUNG_PREIS_FAKTOR: 2.5
+  },
+
   EBENE: {
-    GLOBALE_UPGRADES_FREI: false,
     /**
      * Ein Ring-Upgrade wird sichtbar, sobald der Ring davor dieses Level
      * erreicht hat. Ring 1 ist von Anfang an offen. Getroffen und gutgeschrieben

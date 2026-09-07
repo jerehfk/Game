@@ -23,8 +23,18 @@ const Zustand = {
       punkteProTreffer: DATA.SCORING.START_PUNKTE_PRO_TREFFER,
       /** Stellung des Mengenknopfs, Index in DATA.KAUF.MENGEN. */
       kaufMengeIndex: 0,
+
+      /** Federn: dauerhafte Waehrung, ueberdauert jedes Prestige. */
+      federn: 0,
+      /** In dieser Runde gesammelt, erst beim Prestige gutgeschrieben. */
+      federnAnstehend: 0,
+      prestiges: 0,
+
+      /** Mit Federn gekauft, ueberdauern das Prestige. */
       zielgenauigkeitLevel: 1,
       schussintervallLevel: 1,
+      schwungLevel: 0,
+
       ringLevel: new Array(DATA.SCHEIBE.RINGE_GESAMT).fill(1),
       /** Aufstiege je Ring; hebt Maximallevel und Wirkung, startet bei 0. */
       ascensions: new Array(DATA.SCHEIBE.RINGE_GESAMT).fill(0),
@@ -198,16 +208,22 @@ const Speicher = {
         DATA.SCORING.START_PUNKTE_PRO_TREFFER,
         zahl(daten.punkteProTreffer, DATA.SCORING.START_PUNKTE_PRO_TREFFER)
       ),
-      // Solange die globalen Achsen gesperrt sind, werden ihre Level auf 1
-      // geklemmt. Ein Stand aus einer Fassung, in der sie kaufbar waren, wuerde
-      // sonst mit Werten weiterlaufen, die in dieser Ebene niemand erreichen
-      // kann. Gespeichert bleiben die Felder, damit spaetere Staende passen.
-      zielgenauigkeitLevel: DATA.EBENE.GLOBALE_UPGRADES_FREI
+      federn: Math.floor(zahl(daten.federn, 0)),
+      federnAnstehend: Math.floor(zahl(daten.federnAnstehend, 0)),
+      prestiges: Math.floor(zahl(daten.prestiges, 0)),
+
+      // Ohne Prestige sind die beiden Achsen gesperrt und stehen auf 1 - ein
+      // Stand aus einer Fassung, in der sie kaufbar waren, liefe sonst mit
+      // Werten weiter, die in dieser Runde niemand erreichen kann.
+      zielgenauigkeitLevel: zahl(daten.prestiges, 0) > 0
         ? level(daten.zielgenauigkeitLevel, DATA.ZIELGENAUIGKEIT.MAX_LEVEL)
         : 1,
-      schussintervallLevel: DATA.EBENE.GLOBALE_UPGRADES_FREI
+      schussintervallLevel: zahl(daten.prestiges, 0) > 0
         ? level(daten.schussintervallLevel, DATA.SCHUSSINTERVALL.MAX_LEVEL)
         : 1,
+      schwungLevel: zahl(daten.prestiges, 0) > 0
+        ? Math.max(0, Math.floor(zahl(daten.schwungLevel, 0)))
+        : 0,
       ringLevel: frisch.ringLevel,
       ascensions: frisch.ascensions,
       statistik: frisch.statistik,

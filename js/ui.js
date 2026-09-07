@@ -14,6 +14,8 @@ const UI = {
   ringZeilen: {},
   /** Bis zu welchem Ring zuletzt gebaut wurde - erst danach lohnt ein Neubau. */
   gebautBis: 0,
+  /** Zeilen der drei Federn-Upgrades. */
+  federZeilen: [],
 
   initialisieren() {
     const k = this.knoten;
@@ -24,10 +26,101 @@ const UI = {
     k.statPps = document.getElementById('stat-pps');
     k.schuesse = document.getElementById('stat-schuesse');
     k.quote = document.getElementById('stat-quote');
+    k.federn = document.getElementById('stat-federn');
+    k.prestiges = document.getElementById('stat-prestiges');
+    k.federnAnstehend = document.getElementById('federn-anstehend');
+    k.prestigeKnopf = document.getElementById('knopf-prestige');
+    k.federnListe = document.getElementById('federn-upgrades');
 
     this.kopfBauen();
     this.listeBauen();
+    this.prestigeBinden();
     this.speicherKnoepfeBinden();
+  },
+
+  // --- Prestige -----------------------------------------------------------
+
+  prestigeBinden() {
+    this.knoten.prestigeKnopf.addEventListener('click', () => {
+      const federn = Math.floor(spiel.federnAnstehend);
+      Overlay.zeigen({
+        titel: 'Alles zurücksetzen und ' + Logik.gruppiere(federn) + ' Federn erhalten?',
+        text: [
+          'Punkte, alle Ring-Level, Aufstiege und Freischaltungen fallen auf den Anfang zurück.',
+          'Federn und die damit gekauften Upgrades bleiben.'
+        ],
+        knoepfe: [
+          { beschriftung: 'Abbrechen' },
+          {
+            beschriftung: 'Prestige',
+            klasse: 'gefahr',
+            aktion: () => {
+              if (Upgrades.prestige()) Spiel.nachLadenAufsetzen();
+            }
+          }
+        ]
+      });
+    });
+  },
+
+  /**
+   * Die drei Federn-Upgrades. Sie entstehen erst, wenn Upgrades.alle sie
+   * fuehrt - also nach dem ersten Prestige.
+   */
+  federnListeBauen() {
+    const gewuenscht = Upgrades.alle.filter((u) => u.gruppe === 'federn');
+    if (gewuenscht.length === this.federZeilen.length) return;
+
+    this.federZeilen = [];
+    this.knoten.federnListe.textContent = '';
+
+    for (const u of gewuenscht) {
+      const knopf = document.createElement('button');
+      knopf.type = 'button';
+      knopf.className = 'feder';
+
+      const oben = document.createElement('span');
+      oben.className = 'oben';
+      const unten = document.createElement('span');
+      unten.className = 'unten';
+      knopf.append(oben, unten);
+
+      knopf.addEventListener('click', () => {
+        if (Upgrades.kaufenMenge(u)) this.aktualisieren();
+      });
+
+      this.knoten.federnListe.appendChild(knopf);
+      this.federZeilen.push({ u, knopf, oben, unten });
+    }
+  },
+
+  prestigeAktualisieren() {
+    const k = this.knoten;
+    const anstehend = Math.floor(spiel.federnAnstehend);
+
+    k.federn.textContent = Logik.gruppiere(Math.floor(spiel.federn));
+    k.prestiges.textContent = Logik.gruppiere(spiel.prestiges);
+    k.federnAnstehend.textContent = '+' + Logik.gruppiere(anstehend) + ' Federn bei Prestige';
+    k.prestigeKnopf.disabled = !Upgrades.prestigeMoeglich();
+
+    this.federnListeBauen();
+    for (const z of this.federZeilen) {
+      const level = z.u.level();
+      z.oben.textContent = z.u.name + ' · Lvl ' + level;
+
+      if (Upgrades.amMaximum(z.u)) {
+        z.unten.textContent = z.u.wirkung() + ' · maximal';
+        z.knopf.disabled = true;
+        z.knopf.classList.add('arm');
+        continue;
+      }
+
+      const anzahl = Math.max(1, Upgrades.anzahlFuer(z.u));
+      z.unten.textContent = z.u.wirkung() + ' · ' + Logik.formatiereZahl(z.u.kostenFuer(anzahl));
+      const bezahlbar = Upgrades.bezahlbar(z.u);
+      z.knopf.disabled = !bezahlbar;
+      z.knopf.classList.toggle('arm', !bezahlbar);
+    }
   },
 
   // --- Kopfzeile ----------------------------------------------------------
@@ -259,11 +352,15 @@ const UI = {
 
     this.kopfAktualisieren();
     this.ringeAktualisieren();
+    this.prestigeAktualisieren();
   },
 
   /** Nach Laden, Import oder Zuruecksetzen muss die Kartenliste neu entstehen. */
   neuAufbauen() {
     this.gebautBis = 0;
+    this.federZeilen = [];
+    this.knoten.federnListe.textContent = "";
+    Upgrades.aufbauen();
     this.aktualisieren();
   }
 };
