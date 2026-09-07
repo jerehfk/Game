@@ -56,17 +56,29 @@ const Logik = {
    * ist fuer alle zehn dieselbe. Welchen Ring man als naechsten aufmacht, ist
    * damit eine Entscheidung und nicht mehr nur eine Frage der Trefferquote.
    */
-  kostenRing(ring, level) {
-    return Math.round(this.rohkostenRing(ring, level));
+  kostenRing(ring, level, ascensions) {
+    return Math.round(this.rohkostenRing(ring, level, ascensions));
   },
 
   /**
    * Ungerundeter Preis - nur intern, damit sich Rundungen nicht summieren,
    * wenn mehrere Level am Stueck gerechnet werden.
    */
-  rohkostenRing(ring, level) {
+  rohkostenRing(ring, level, ascensions) {
     const r = DATA.RINGE[ring - 1];
-    return r.grundpreis * Math.pow(r.kostenfaktor, level - 1);
+    return this.ringGrundpreis(ring, ascensions) * Math.pow(r.kostenfaktor, level - 1);
+  },
+
+  /**
+   * Grundpreis eines Rings - der Preis fuer Level 1 auf 2.
+   *
+   * Er verdreifacht sich mit jedem Aufstieg. Nach der Ascension faellt das
+   * Level auf 1 zurueck, die Preiskurve beginnt also von diesem erhoehten
+   * Grundpreis aus wieder von vorn.
+   */
+  ringGrundpreis(ring, ascensions) {
+    return DATA.RINGE[ring - 1].grundpreis
+      * Math.pow(DATA.ASCENSION.GRUNDPREIS_FAKTOR, this.ringAscensions(ring, ascensions));
   },
 
   /**
@@ -82,13 +94,13 @@ const Logik = {
    * Fuer mehrere Level bleibt die Reihe, jetzt aber geklammert und gerundet:
    * Preise sind im Spiel immer ganzzahlig.
    */
-  kostenRingMenge(ring, level, anzahl) {
+  kostenRingMenge(ring, level, anzahl, ascensions) {
     if (anzahl <= 0) return 0;
-    if (anzahl === 1) return this.kostenRing(ring, level);
+    if (anzahl === 1) return this.kostenRing(ring, level, ascensions);
 
     const q = DATA.RINGE[ring - 1].kostenfaktor;
     const reihe = (Math.pow(q, anzahl) - 1) / (q - 1);
-    return Math.round(this.rohkostenRing(ring, level) * reihe);
+    return Math.round(this.rohkostenRing(ring, level, ascensions) * reihe);
   },
 
   /**
@@ -177,25 +189,21 @@ const Logik = {
   },
 
   /**
-   * Preis des Aufstiegs, bemessen am erreichten Zuwachs.
+   * Preis des Aufstiegs: das Vielfache dessen, was das naechste - nicht mehr
+   * kaufbare - Level gekostet haette.
    *
-   * Das mittlere Glied ist das Vielfache, auf das der Ring seinen Zuwachs
-   * hochgearbeitet hat. Weil der Ertrag eines Aufstiegs an genau diesem Wert
-   * haengt, kuerzt er sich heraus - uebrig bleibt PREIS_WACHSTUM je Aufstieg
-   * als Bremse. Naeheres in data.js.
+   * Gerechnet wird mit dem aktuellen, also bereits verdreifachten Grundpreis.
+   * Dadurch wachsen Aufstieg und Wiederaufbau im selben Takt.
    */
   ascensionPreis(ring, ascensions) {
-    const a = DATA.ASCENSION;
     const r = DATA.RINGE[ring - 1];
     const stufe = this.ringAscensions(ring, ascensions);
-    const erreichterZuwachs = this.ringZuwachs(ring, this.ringMaxLevel(ring, stufe), stufe);
 
     // Gerundet wie jeder andere Preis - Anzeige und Kaufpruefung nehmen
     // denselben Wert, sonst steht da 999 und der Kauf scheitert an 999,9999.
-    return Math.round(a.PREIS_VIELFACHES
-      * r.grundpreis
-      * (erreichterZuwachs / r.grundzuwachs)
-      * Math.pow(a.PREIS_WACHSTUM, stufe));
+    return Math.round(DATA.ASCENSION.PREIS_VIELFACHES
+      * this.ringGrundpreis(ring, stufe)
+      * Math.pow(r.kostenfaktor, this.ringMaxLevel(ring, stufe)));
   },
 
   /** Steht der Ring an seinem Maximallevel? */

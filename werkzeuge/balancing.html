@@ -17,11 +17,12 @@ function streuung(l){const z=DATA.ZIELGENAUIGKEIT;l=Math.min(l,z.MAX_LEVEL);retu
 function intervall(l){const s=DATA.SCHUSSINTERVALL;l=Math.min(l,s.MAX_LEVEL);return s.START_SEKUNDEN*Math.pow(s.FAKTOR_PRO_LEVEL,l-1);}
 function kostenZG(l){const z=DATA.ZIELGENAUIGKEIT;return z.KOSTEN_BASIS*Math.pow(z.KOSTEN_FAKTOR,l-1)*Math.pow(z.KOSTEN_SPRUNG_FAKTOR,Math.floor((l-1)/z.KOSTEN_SPRUNG_ALLE));}
 function kostenSI(l){const s=DATA.SCHUSSINTERVALL;return s.KOSTEN_BASIS*Math.pow(s.KOSTEN_FAKTOR,l-1);}
-function kostenRing(ring,l){const r=DATA.RINGE[ring-1];return r.grundpreis*Math.pow(r.kostenfaktor,l-1);}
+function ringGrundpreis(ring,asc){return DATA.RINGE[ring-1].grundpreis*Math.pow(DATA.ASCENSION.GRUNDPREIS_FAKTOR,asc);}
+function kostenRing(ring,l,asc){return ringGrundpreis(ring,asc)*Math.pow(DATA.RINGE[ring-1].kostenfaktor,l-1);}
 function ringFaktor(asc){const a=DATA.ASCENSION;return Math.pow(DATA.RING_UPGRADE.FAKTOR_PRO_LEVEL, a.Y_BASIS+a.Y_JE_ASCENSION*asc);}
 function ringMaxLevel(asc){const a=DATA.ASCENSION;return a.MAX_LEVEL_BASIS+a.MAX_LEVEL_JE_ASCENSION*asc;}
-function ascensionPreis(ring,asc){const a=DATA.ASCENSION,r=DATA.RINGE[ring-1];
-  return a.PREIS_VIELFACHES*r.grundpreis*(ringZuwachs(ring,ringMaxLevel(asc),asc)/r.grundzuwachs)*Math.pow(a.PREIS_WACHSTUM,asc);}
+function ascensionPreis(ring,asc){
+  return DATA.ASCENSION.PREIS_VIELFACHES*ringGrundpreis(ring,asc)*Math.pow(DATA.RINGE[ring-1].kostenfaktor,ringMaxLevel(asc));}
 function ringZuwachs(ring,l,asc){return DATA.RINGE[ring-1].grundzuwachs*Math.pow(ringFaktor(asc),l-1);}
 
 // Die Ringe sind unterschiedlich breit; die Grenzen stehen in DATA.RINGE.
@@ -80,7 +81,7 @@ function simulieren(dauer, marken, art){
     for(let i=0;i<10;i++){
       if(i>0 && s.ring[i-1] < DATA.EBENE.RING_FREI_AB_LEVEL && s.asc[i-1]===0) break;
       if(s.ring[i] < ringMaxLevel(s.asc[i])){
-        liste.push({kosten:kostenRing(i+1,s.ring[i]),kaufen:()=>s.ring[i]++,zurueck:()=>s.ring[i]--});
+        liste.push({kosten:kostenRing(i+1,s.ring[i],s.asc[i]),kaufen:()=>s.ring[i]++,zurueck:()=>s.ring[i]--});
       } else {
         // Am Maximallevel bleibt nur der Aufstieg. Wann er genommen wird,
         // entscheidet die Strategie weiter unten.

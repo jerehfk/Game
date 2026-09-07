@@ -200,9 +200,25 @@ const DATA = {
     MAX_LEVEL_JE_ASCENSION: 10,
     Y_BASIS: 1,
     Y_JE_ASCENSION: 0.1,
-    /** So gewaehlt, dass der erste Aufstieg von Ring 1 rund 38.700 kostet. */
-    PREIS_VIELFACHES: 3000,
-    PREIS_WACHSTUM: 2
+
+    /**
+     * Je Aufstieg verdreifacht sich der Grundpreis des Rings, und die
+     * Preiskurve beginnt von diesem neuen Grundpreis aus wieder bei Level 1.
+     *
+     * Ohne diesen Faktor kostete der Wiederaufbau von Ring 1 auf sein neues
+     * Maximum weniger als ein Drittel der Ascension selbst - wer gerade genug
+     * fuer den Aufstieg hatte, kaufte den Ring danach in Sekunden wieder aus
+     * und die Mechanik verpuffte. Mit 3 kosten Aufstieg und Wiederaufbau
+     * ungefaehr gleich viel, und dieses Verhaeltnis bleibt ueber alle
+     * Aufstiege gleich: beide wachsen mit 3^a * Kostenfaktor^(10a).
+     *
+     * Das ist der Regler fuer das Tempo dieser Mechanik - kleiner heisst
+     * schnellerer Wiederaufbau, groesser heisst zaeher.
+     */
+    GRUNDPREIS_FAKTOR: 3,
+
+    /** Der Aufstieg kostet so viel wie das naechste, nicht mehr kaufbare Level. */
+    PREIS_VIELFACHES: 100
   },
 
   /**
